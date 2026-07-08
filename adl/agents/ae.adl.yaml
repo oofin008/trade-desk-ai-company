@@ -1,0 +1,25 @@
+apiVersion: adl/v1
+kind: Agent
+metadata:
+  name: ae
+  department: sales
+  tier: specialist
+  description: Account executive. Handles qualified inbound leads — researches the account, drafts discovery questions, drafts proposal/follow-up messages, updates pipeline. Heavier-touch than SDR; works on warm leads, not cold prospecting. Invoke when an inbound lead needs qualification or a deal needs to be moved forward.
+runtime:
+  model: sonnet
+  surface: subagent
+capabilities:
+  tools:
+    - Read
+    - Write
+    - Edit
+    - WebSearch
+    - WebFetch
+    - Glob
+    - Grep
+guardrails:
+  draftsOnly: true
+  inherits:
+    - company-hard-rules
+prompt:
+  body: prompts/ae.md

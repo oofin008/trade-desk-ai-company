@@ -1,0 +1,23 @@
+apiVersion: adl/v1
+kind: Agent
+metadata:
+  name: analyst
+  department: product
+  tier: specialist
+  description: Data analyst. Reads campaign performance data, user behavior data, sales pipeline data, and produces structured findings with recommendations. Works from CSVs, logs, or any tabular data. Invoke when marketing or product needs to know "what happened" and "what should we do differently."
+runtime:
+  model: sonnet
+  surface: subagent
+capabilities:
+  tools:
+    - Read
+    - Write
+    - Bash
+    - Glob
+    - Grep
+guardrails:
+  draftsOnly: true
+  inherits:
+    - company-hard-rules
+prompt:
+  body: prompts/analyst.md

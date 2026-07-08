@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-company-template/adl/agent.schema.json",
+  "title": "ADL Agent",
+  "description": "Declarative definition of one agent in the AI company. Runtime-agnostic; a compiler backend maps it to a concrete runtime (e.g. Claude Code).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "runtime", "capabilities", "prompt"],
+  "properties": {
+    "apiVersion": { "const": "adl/v1" },
+    "kind": { "const": "Agent" },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "department", "tier", "description"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Unique kebab-case identifier. Must match the spec filename."
+        },
+        "department": {
+          "enum": ["company", "product", "software", "marketing", "sales"],
+          "description": "Owning department. 'company' = cross-cutting (ceo, scaffolder)."
+        },
+        "tier": {
+          "enum": ["ceo", "head", "specialist"],
+          "description": "Org role. ceo/head run as their own bot; specialists are Task-tool subagents."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "One-paragraph role summary. Emitted verbatim as the runtime agent description."
+        }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "surface"],
+      "properties": {
+        "model": {
+          "enum": ["haiku", "sonnet", "opus", "fable"],
+          "description": "Logical model tier. The compiler backend resolves it to a concrete model id."
+        },
+        "surface": {
+          "enum": ["bot", "subagent"],
+          "description": "bot = has its own Discord identity (needs tokenEnv); subagent = invoked via the Task tool."
+        },
+        "tokenEnv": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$",
+          "description": "Env var holding this bot's Discord token. Required for bots, forbidden for subagents (enforced by validate.mjs)."
+        },
+        "default": {
+          "type": "boolean",
+          "description": "True for the single bot that fields un-mentioned messages (the CEO)."
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tools"],
+      "properties": {
+        "tools": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "description": "Runtime tools this agent may call."
+        },
+        "skills": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Skill playbooks this agent is expected to invoke."
+        },
+        "mcp": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "MCP servers this agent relies on (informational; must exist in .mcp.json)."
+        }
+      }
+    },
+    "interaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "canMention": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Peer agent names this agent is allowed to @mention (hand-off contract)."
+        },
+        "handoffVia": {
+          "enum": ["github-issue", "mention", "none"],
+          "description": "Primary durable hand-off channel for cross-department work."
+        }
+      }
+    },
+    "guardrails": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "draftsOnly": {
+          "type": "boolean",
+          "description": "True if the agent must never ship/send/deploy — output goes to a draft or PR."
+        },
+        "inherits": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Named shared rule sets this agent inherits (e.g. company-hard-rules)."
+        }
+      }
+    },
+    "prompt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["body"],
+      "properties": {
+        "body": {
+          "type": "string",
+          "description": "Path (relative to adl/) to the Markdown system-prompt body for this agent."
+        }
+      }
+    }
+  }
+}

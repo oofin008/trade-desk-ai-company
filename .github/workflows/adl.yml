@@ -1,0 +1,36 @@
+name: ADL
+
+# Enforce that agent specs are valid and the generated runtime artifacts
+# (.claude/agents/*.md, roster.json) are in sync with them. Fails on drift so
+# nobody hand-edits a generated file without recompiling.
+on:
+  push:
+    paths:
+      - 'adl/**'
+      - '.claude/agents/**'
+      - 'scripts/discord-agents/roster.json'
+      - '.github/workflows/adl.yml'
+  pull_request:
+    paths:
+      - 'adl/**'
+      - '.claude/agents/**'
+      - 'scripts/discord-agents/roster.json'
+      - '.github/workflows/adl.yml'
+
+jobs:
+  validate-and-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install ADL tooling
+        working-directory: adl
+        run: npm ci || npm install
+      - name: Validate specs
+        working-directory: adl
+        run: npm run validate
+      - name: Check artifacts are in sync
+        working-directory: adl
+        run: npm run check

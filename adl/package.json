@@ -1,0 +1,21 @@
+{
+  "name": "ai-company-adl",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Agent Definition Language (ADL) — declarative source of truth for the AI company's agents. Compiles to Claude Code artifacts.",
+  "bin": {
+    "adl": "./cli.mjs"
+  },
+  "scripts": {
+    "validate": "node validate.mjs",
+    "compile": "node compile.mjs",
+    "check": "node compile.mjs --check",
+    "migrate": "node migrate.mjs",
+    "build": "node validate.mjs && node compile.mjs"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "yaml": "^2.5.1"
+  }
+}

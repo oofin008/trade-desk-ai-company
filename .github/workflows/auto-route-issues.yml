@@ -1,0 +1,80 @@
+name: Auto-route issues
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  route:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply department label based on title/body
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const text = `${issue.title}\n${issue.body || ''}`.toLowerCase();
+
+            // Simple keyword routing. Tune over time.
+            const rules = [
+              { label: 'dept:software',  patterns: ['bug', 'crash', 'error', 'implement', 'refactor', 'test', 'ci', 'deploy', 'api', 'endpoint', 'frontend', 'backend', 'database', 'migration'] },
+              { label: 'dept:product',   patterns: ['feature request', 'user research', 'pain point', 'icp', 'spec', 'roadmap', 'pricing', 'positioning'] },
+              { label: 'dept:marketing', patterns: ['campaign', 'launch', 'blog', 'landing page', 'social', 'email blast', 'newsletter', 'ad ', 'seo'] },
+              { label: 'dept:sales',     patterns: ['lead', 'prospect', 'outreach', 'demo request', 'customer call', 'discovery', 'proposal'] },
+            ];
+
+            const labelsToAdd = new Set();
+            for (const rule of rules) {
+              if (rule.patterns.some(p => text.includes(p))) {
+                labelsToAdd.add(rule.label);
+              }
+            }
+
+            // Default to product if nothing matched — Product triages and routes.
+            if (labelsToAdd.size === 0) labelsToAdd.add('dept:product');
+
+            // Add status:todo if no status label present.
+            const existingLabels = (issue.labels || []).map(l => l.name);
+            if (!existingLabels.some(l => l.startsWith('status:'))) {
+              labelsToAdd.add('status:todo');
+            }
+
+            if (labelsToAdd.size > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: [...labelsToAdd]
+              });
+            }
+
+      - name: Comment with next step
+        if: github.event.action == 'opened'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const refreshed = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number
+            });
+            const labels = refreshed.data.labels.map(l => l.name);
+            const dept = labels.find(l => l.startsWith('dept:'));
+            const handler = {
+              'dept:software': 'head-of-software',
+              'dept:product': 'head-of-product',
+              'dept:marketing': 'head-of-marketing',
+              'dept:sales': 'head-of-sales'
+            }[dept] || 'head-of-product';
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `Routed to **${dept}** → handler: \`${handler}\`.\n\nFounder: invoke this with \`/directive Handle issue #${issue.number}\` or directly: \`Use the ${handler} agent to handle issue #${issue.number}\`.`
+            });

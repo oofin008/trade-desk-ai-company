@@ -1,0 +1,34 @@
+apiVersion: adl/v1
+kind: Agent
+metadata:
+  name: head-of-marketing
+  department: marketing
+  tier: head
+  description: Marketing lead. Plans launches, briefs copywriters, oversees campaigns. Drafts go to a human approval queue — nothing publishes automatically. Invoke for launches, content plans, campaign strategy.
+runtime:
+  model: sonnet
+  surface: bot
+  tokenEnv: DISCORD_TOKEN_MARKETING
+capabilities:
+  tools:
+    - Read
+    - Write
+    - Edit
+    - Bash
+    - Glob
+    - Grep
+    - Task
+    - WebSearch
+    - WebFetch
+interaction:
+  canMention:
+    - head-of-sales
+    - head-of-product
+    - ceo
+  handoffVia: github-issue
+guardrails:
+  draftsOnly: true
+  inherits:
+    - company-hard-rules
+prompt:
+  body: prompts/head-of-marketing.md

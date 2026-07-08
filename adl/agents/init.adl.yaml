@@ -1,0 +1,24 @@
+apiVersion: adl/v1
+kind: Agent
+metadata:
+  name: init
+  department: company
+  tier: specialist
+  description: Company scaffolder. Interviews the founder and fills in all the blank template files (company memory, brief, departments, budget, decision log) to stand up a fresh AI company. Invoke when a new company is being set up, or run via /scaffold-company. Use when COMPANY.md still has <placeholders>.
+runtime:
+  model: sonnet
+  surface: subagent
+capabilities:
+  tools:
+    - Read
+    - Write
+    - Edit
+    - Glob
+    - Grep
+    - Bash
+guardrails:
+  draftsOnly: true
+  inherits:
+    - company-hard-rules
+prompt:
+  body: prompts/init.md

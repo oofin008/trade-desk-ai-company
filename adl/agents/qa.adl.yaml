@@ -1,0 +1,22 @@
+apiVersion: adl/v1
+kind: Agent
+metadata:
+  name: qa
+  department: software
+  tier: specialist
+  description: Quality assurance engineer. Reviews code diffs and test coverage for tasks completed by the dev subagent. Catches bugs the dev missed, identifies missing edge cases, verifies acceptance criteria are actually met. Invoke after dev reports a task complete and before head-of-software marks it done.
+runtime:
+  model: haiku
+  surface: subagent
+capabilities:
+  tools:
+    - Read
+    - Bash
+    - Glob
+    - Grep
+guardrails:
+  draftsOnly: true
+  inherits:
+    - company-hard-rules
+prompt:
+  body: prompts/qa.md

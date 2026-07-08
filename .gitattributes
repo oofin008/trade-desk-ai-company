@@ -1,0 +1,4 @@
+# Generated from adl/ — edit the ADL specs, not these files. See adl/README.md.
+# `linguist-generated` collapses them in PR diffs to discourage hand-edits.
+.claude/agents/*.md            linguist-generated=true
+scripts/discord-agents/roster.json  linguist-generated=true

@@ -1,0 +1,28 @@
+[
+  {
+    "name": "ceo",
+    "tokenEnv": "DISCORD_TOKEN_CEO",
+    "model": "sonnet",
+    "default": true
+  },
+  {
+    "name": "head-of-marketing",
+    "tokenEnv": "DISCORD_TOKEN_MARKETING",
+    "model": "sonnet"
+  },
+  {
+    "name": "head-of-product",
+    "tokenEnv": "DISCORD_TOKEN_PRODUCT",
+    "model": "sonnet"
+  },
+  {
+    "name": "head-of-sales",
+    "tokenEnv": "DISCORD_TOKEN_SALES",
+    "model": "sonnet"
+  },
+  {
+    "name": "head-of-software",
+    "tokenEnv": "DISCORD_TOKEN_SOFTWARE",
+    "model": "sonnet"
+  }
+]

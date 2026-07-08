@@ -1,0 +1,13 @@
+{
+  "name": "ai-startup-discord-bridge",
+  "version": "0.1.0",
+  "description": "Bridge between Discord and a local Claude Code session running the AI startup",
+  "type": "module",
+  "main": "bridge.js",
+  "scripts": {
+    "start": "node bridge.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.15.0"
+  }
+}

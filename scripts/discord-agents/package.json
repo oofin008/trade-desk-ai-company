@@ -1,0 +1,14 @@
+{
+  "name": "ai-startup-discord-agents",
+  "version": "0.1.0",
+  "description": "Multi-agent Discord layer: each company agent is its own bot, addressable by @mention, able to hand off to peers in-channel.",
+  "type": "module",
+  "main": "agent-runner.js",
+  "scripts": {
+    "start": "node launcher.js",
+    "start:one": "node agent-runner.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.15.0"
+  }
+}
