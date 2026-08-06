@@ -56,13 +56,13 @@ DISCORD_TOKEN_SALES=...
 
 DISCORD_CHANNEL_ID=...           # the one shared channel
 ALLOWED_USER_IDS=...             # your Discord user id(s), comma-separated — REQUIRED in practice
-AI_STARTUP_DIR=/abs/path/to/ojfn-ai-company
+AI_STARTUP_DIR=/abs/path/to/your-ai-company
 
 # Cost / safety knobs (all optional, defaults shown)
-HOP_BUDGET=6                     # max agent→agent hops per founder message
+HOP_BUDGET=30                    # max agent→agent hops per founder message
 MAX_CONCURRENCY=2                # max simultaneous claude invocations across all agents
 CLAUDE_TIMEOUT_MINUTES=30
-SESSION_USD_LIMIT=5              # ledger auto-freezes at this session spend
+SESSION_USD_LIMIT=5              # ledger posts a reminder at this session spend (no freeze)
 DAILY_USD_LIMIT=20              # ...and this daily spend
 
 # Memory
@@ -144,7 +144,7 @@ missing `DISCORD_TOKEN_*` or the bot's Message Content Intent isn't enabled).
 - `/status` — current hops, spend, frozen?
 - `/freeze` — stop all agents from invoking claude
 - `/unfreeze` — resume
-- `/reset` — clear the chain + spend ledger + **all agents' memory**
+- `/reset` — clear the chain + spend ledger + **all agents' memory** + downloaded attachments
 
 ## Configuring agent models
 
@@ -234,7 +234,7 @@ an agent's behavior.
 - **Mention-gated:** an agent spends tokens *only* when actually addressed. Idle channel = zero `claude` processes.
 - **Bounded context:** agents read the condensed `company/memory/BRIEF.md` instead of the full `COMPANY.md`, and durable handoffs live in GitHub issues + `company/` files rather than the context window. (Per-agent memory is on — see "Memory" — which does grow context per turn; `/reset` wipes it.)
 - **Sonnet** for every agent (see `roster.json`); Opus only on explicit escalation.
-- **Hop budget + concurrency cap + spend ledger auto-freeze** bound the worst case.
+- **Hop budget + concurrency cap** bound the worst case; the spend ledger posts a reminder at the limit (manual `/freeze` to stop).
 
 ## Growing the roster later
 

@@ -3,7 +3,7 @@
 // All agent processes run on the same host, so we coordinate through a single
 // JSON file guarded by a lockfile. The state holds:
 //   - chainId / hops : the current auto-chaining budget (reset by a founder msg)
-//   - frozen         : global kill switch (spend limit or /freeze)
+//   - frozen         : global kill switch (manual /freeze only)
 //   - running        : concurrency counter (cap simultaneous claude invocations)
 //   - ledger         : accumulated spend (session + daily, daily auto-resets)
 //
@@ -86,14 +86,16 @@ export function makeStore(stateDir) {
       return { ok: s.hops <= budget, hops: s.hops };
     }),
 
+    // Accumulate spend. Crossing a configured limit no longer freezes the
+    // system — it only flags `limitHit` so the runner can post a reminder.
+    // (Freezing is manual via /freeze.)
     addSpend: (usd, { sessionLimit, dailyLimit }) => update((s) => {
       s.ledger.sessionUsd += usd || 0;
       s.ledger.dailyUsd += usd || 0;
-      if ((sessionLimit && s.ledger.sessionUsd >= sessionLimit) ||
-          (dailyLimit && s.ledger.dailyUsd >= dailyLimit)) {
-        s.frozen = true;
-      }
-      return { frozen: s.frozen, sessionUsd: s.ledger.sessionUsd, dailyUsd: s.ledger.dailyUsd };
+      const limitHit =
+        (sessionLimit && s.ledger.sessionUsd >= sessionLimit) ||
+        (dailyLimit && s.ledger.dailyUsd >= dailyLimit);
+      return { limitHit, sessionUsd: s.ledger.sessionUsd, dailyUsd: s.ledger.dailyUsd };
     }),
 
     setFrozen: (v) => update((s) => { s.frozen = !!v; }),

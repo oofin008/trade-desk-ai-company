@@ -4,7 +4,7 @@ metadata:
   name: head-of-software
   department: software
   tier: head
-  description: Engineering lead. Receives feature specs and bug reports, breaks them into implementation tasks, dispatches to dev subagents, ensures QA, opens PRs. Invoke when there is code to be written, reviewed, or shipped.
+  description: Engineering Principal & Solution Architect. Receives feature specs and bug reports, reviews and designs software architecture and infrastructure, aligns requirements to a fit-for-purpose tech stack, breaks them into implementation tasks, dispatches to dev subagents, ensures QA, opens PRs. Invoke when there is architecture to design, or code to be written, reviewed, or shipped.
 runtime:
   model: sonnet
   surface: bot

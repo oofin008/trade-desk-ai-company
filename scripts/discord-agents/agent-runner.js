@@ -12,7 +12,7 @@
 //   - each turn is a fresh, scoped invocation (no growing --continue context);
 //     durable memory lives in GitHub issues + company/ files
 //   - per-agent --model tier (sonnet by default), hop budget, concurrency cap,
-//     and a spend ledger that auto-freezes at the configured limits
+//     and a spend ledger that reminds (not freezes) at the configured limits
 //
 // Run one directly:
 //   AGENT_NAME=ceo DISCORD_TOKEN_CEO=... DISCORD_CHANNEL_ID=... \
@@ -21,7 +21,7 @@
 
 import { Client, GatewayIntentBits, Partials } from 'discord.js';
 import { spawn } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -41,7 +41,7 @@ const {
   AI_STARTUP_DIR,
   ALLOWED_USER_IDS = '',
   CLAUDE_CMD = 'claude',
-  HOP_BUDGET = '6',
+  HOP_BUDGET = '30',
   MAX_CONCURRENCY = '2',
   CLAUDE_TIMEOUT_MINUTES = '30',
   SESSION_USD_LIMIT = '5',
@@ -98,17 +98,49 @@ const loadSessionId = () => (useSession ? readSessions()[AGENT_NAME] || null : n
 const saveSessionId = (id) => { const m = readSessions(); m[AGENT_NAME] = id; writeFileSync(sessionsPath, JSON.stringify(m, null, 2)); };
 const clearAllSessions = () => { try { writeFileSync(sessionsPath, '{}'); } catch {} };
 
+// Wipe downloaded Discord attachments (see saveAttachments). Cleared on /reset
+// alongside sessions/ledger so a reset leaves no stale files on disk.
+const attachmentsDir = join(stateDir, 'attachments');
+const clearAttachments = () => { try { rmSync(attachmentsDir, { recursive: true, force: true }); } catch {} };
+
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
   partials: [Partials.Channel]
 });
 
-client.once('ready', () => {
+client.once('clientReady', () => {
   idStore.setOwn(AGENT_NAME, client.user.id);
   console.log(`[${AGENT_NAME}] online as ${client.user.tag} (${client.user.id}) — model=${model}, primary=${isPrimary}`);
   if (allowedUsers.size === 0) {
     console.warn(`[${AGENT_NAME}] ⚠️  ALLOWED_USER_IDS not set — anyone in the channel can drive this agent.`);
   }
+});
+
+// Connection lifecycle. Without these, a sleep/network-drop that discord.js
+// can't RESUME leaves a silent zombie: the process stays alive but
+// disconnected, so pm2 never restarts it (it looks healthy). We log the
+// transitions and, on a non-resumable session, exit so pm2 replaces us with a
+// fresh process. discord.js auto-reconnects on transient drops on its own.
+client.on('error', (e) => console.error(`[${AGENT_NAME}] client error`, e?.message || e));
+client.on('shardError', (e) => console.error(`[${AGENT_NAME}] shard error`, e?.message || e));
+client.on('shardDisconnect', (ev, id) => console.warn(`[${AGENT_NAME}] shard ${id} disconnected (code ${ev?.code}) — attempting reconnect`));
+client.on('shardReconnecting', (id) => console.log(`[${AGENT_NAME}] shard ${id} reconnecting…`));
+client.on('shardResume', (id) => console.log(`[${AGENT_NAME}] shard ${id} resumed`));
+
+// Non-resumable session: discord.js destroys the client and does NOT relogin.
+// Exit so pm2 starts a fresh process instead of leaving a silent zombie.
+client.on('invalidated', () => {
+  console.error(`[${AGENT_NAME}] session invalidated — exiting for pm2 restart`);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (r) => console.error(`[${AGENT_NAME}] unhandledRejection`, r?.message || r));
+// A stray network error (ECONNRESET / connect timeout during a reconnect) can
+// surface as an uncaughtException. Exit cleanly so pm2 restarts a fresh process
+// with a clear log line, rather than dumping a raw stack trace.
+process.on('uncaughtException', (e) => {
+  console.error(`[${AGENT_NAME}] uncaughtException — exiting for pm2 restart:`, e?.message || e);
+  process.exit(1);
 });
 
 // In-process FIFO so this agent handles one message at a time.
@@ -150,7 +182,7 @@ async function handle(message) {
     if (!isPrimary) return;
     if (cmd === '/freeze') { await store.setFrozen(true); return ack(message, '🧊 Frozen. Agents will stop responding. `/unfreeze` to resume.'); }
     if (cmd === '/unfreeze') { await store.setFrozen(false); return ack(message, '▶️ Unfrozen. Agents are live again.'); }
-    if (cmd === '/reset') { await store.resetAll(); clearAllSessions(); return ack(message, '✅ Chain + spend ledger reset, and all agents’ memory cleared.'); }
+    if (cmd === '/reset') { await store.resetAll(); clearAllSessions(); clearAttachments(); return ack(message, '✅ Chain + spend ledger reset, all agents’ memory cleared, and downloaded attachments removed.'); }
     if (cmd === '/status') {
       const s = store.read();
       return ack(message, `📊 hops ${s.hops}/${hopBudget} · session $${s.ledger.sessionUsd.toFixed(2)}/${spendLimits.sessionLimit} · today $${s.ledger.dailyUsd.toFixed(2)}/${spendLimits.dailyLimit} · ${s.frozen ? '🧊 frozen' : 'live'}`);
@@ -201,6 +233,16 @@ async function runTurn(message, ids) {
   let body = humanizeMentions(message.content, ids)
     .replace(new RegExp(`@${AGENT_NAME}\\b`, 'gi'), '')
     .trim();
+
+  // Discord attachments: download them to a Claude-readable path and tell the
+  // agent to Read them (the CLI takes text on stdin, but its Read tool can open
+  // files from disk — .md/.txt/PDF/images alike; projectDir is already --add-dir'd).
+  const filePaths = await saveAttachments(message);
+  if (filePaths.length) {
+    body += `${body ? '\n\n' : ''}[The sender attached ${filePaths.length} file${filePaths.length > 1 ? 's' : ''}. Use the Read tool to open ${filePaths.length > 1 ? 'each' : 'it'}:]\n`
+      + filePaths.map((p) => `- ${p}`).join('\n');
+  }
+
   const prompt = `[Discord] ${message.author.bot ? '@' + fromName : fromName} said:\n\n${body}`;
 
   const preamble = [
@@ -227,11 +269,11 @@ async function runTurn(message, ids) {
   const secs = ((Date.now() - t0) / 1000).toFixed(1);
   console.log(`[${AGENT_NAME}] ${errored ? '✗ error' : '✓ done'} in ${secs}s · $${(cost || 0).toFixed(4)}`);
 
-  // Account for spend; auto-freeze if over the configured limits.
+  // Account for spend; remind (do NOT freeze) if over the configured limits.
   let frozenNote = '';
   if (cost) {
     const r = await store.addSpend(cost, spendLimits);
-    if (r.frozen) frozenNote = `\n\n🧊 Spend limit reached (today $${r.dailyUsd.toFixed(2)}). Agents frozen — \`/unfreeze\` to resume.`;
+    if (r.limitHit) frozenNote = `\n\n⚠️ Spend limit reached (today $${r.dailyUsd.toFixed(2)}, session $${r.sessionUsd.toFixed(2)}). Agents stay live — \`/freeze\` to stop manually.`;
   }
 
   if (errored) {
@@ -338,6 +380,39 @@ function handleStreamLine(line, onResult) {
   } else if (ev.type === 'result') {
     onResult(ev);
   }
+}
+
+// Largest attachment we will download into memory. Anything bigger is skipped
+// (logged, chain continues) to avoid loading huge files. Discord provides a.size.
+const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024; // 25 MB
+
+// Download all attachments on a Discord message to a per-message folder under
+// .discord-agents/ (gitignored, inside projectDir so Claude's Read tool can open
+// them — it handles .md/.txt/PDF/images alike). Returns absolute paths. Files
+// over MAX_ATTACHMENT_BYTES and failures are skipped.
+async function saveAttachments(message) {
+  const files = [...message.attachments.values()];
+  if (!files.length) return [];
+  const dir = join(attachmentsDir, message.id);
+  try { mkdirSync(dir, { recursive: true }); } catch (e) { console.error(`[${AGENT_NAME}] attachment dir failed`, e.message); return []; }
+  const paths = [];
+  for (const a of files) {
+    if (typeof a.size === 'number' && a.size > MAX_ATTACHMENT_BYTES) {
+      console.log(`[${AGENT_NAME}] skipping ${a.name} (${(a.size / 1024 / 1024).toFixed(1)} MB > 25 MB limit)`);
+      continue;
+    }
+    try {
+      const res = await fetch(a.url);
+      if (!res.ok) { console.error(`[${AGENT_NAME}] attachment fetch ${res.status} for ${a.name}`); continue; }
+      const buf = Buffer.from(await res.arrayBuffer());
+      const safe = (a.name || `file-${paths.length}`).replace(/[^\w.\-]/g, '_');
+      const p = join(dir, safe);
+      writeFileSync(p, buf);
+      paths.push(p);
+    } catch (e) { console.error(`[${AGENT_NAME}] attachment download failed`, e.message); }
+  }
+  if (paths.length) console.log(`[${AGENT_NAME}] saved ${paths.length} attachment(s) to ${dir}`);
+  return paths;
 }
 
 function founderTag() {

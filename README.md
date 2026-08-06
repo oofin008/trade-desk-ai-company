@@ -44,11 +44,12 @@ ai-company-template/
 │   │   ├── head-of-product.md     →  researcher, analyst
 │   │   ├── head-of-marketing.md   →  copywriter, designer, analyst
 │   │   └── head-of-sales.md       →  sdr (outbound), ae (inbound)
-│   └── commands/                      # /scaffold-company, /standup, /directive, /review-queue
+│   ├── commands/                      # /scaffold-company, /standup, /directive, /review-queue
+│   └── skills/                        # 17 role playbooks (plain files — not ADL-generated)
 ├── .github/workflows/                 # Auto-route issues, setup labels
 ├── .mcp.json                          # GitHub + Discord MCPs
 ├── company/                           # ← all BLANK placeholders until you scaffold
-│   ├── memory/{COMPANY.md, BRIEF.md}
+│   ├── memory/{COMPANY.md, BRIEF.md, ACTIVITY.md}
 │   ├── decisions/LOG.md
 │   └── BUDGET.md
 ├── departments/
