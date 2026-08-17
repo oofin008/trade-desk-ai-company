@@ -13,7 +13,7 @@ const roster = require('./roster.json');
 
 module.exports = {
   apps: roster.map((entry, i) => ({
-    name: `sstr-agent-${entry.name}`,
+    name: `agent-${entry.name}`,
     script: 'agent-runner.js',
     cwd: __dirname,
     // Pin the absolute path to the claude CLI. pm2's PATH differs from the

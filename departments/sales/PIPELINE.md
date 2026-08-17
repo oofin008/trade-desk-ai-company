@@ -1,6 +1,6 @@
 # Sales Pipeline
 
-**Last updated:** 2026-08-07
+**Last updated:** <YYYY-MM-DD>
 
 ## Active opportunities
 | Account | Contact | Stage | Last touch | Next step | Owner |

@@ -16,9 +16,12 @@
 - **Performance recaps** → `departments/marketing/recaps/[date]-[campaign].md`
 
 ## Channels
-- **LinkedIn** — reaching restaurant owners/operators (QSR chains and independents) in a professional context.
-- **Facebook groups** — restaurant owner communities.
-- Note: this is a founder hunch, not verified ICP research. Where restaurant-owner ICP actually hangs out is still TBD — flag to `head-of-product`/`researcher` for a `research-brief` before committing real spend or campaign effort to either channel.
+> ⚠️ Set the real channels for your ICP via **`/scaffold-company`** or by editing here.
+Pick the channels where your ICP actually makes decisions — don't spread thin.
+- **<Primary channel>** — <why it fits the ICP>
+- **<Secondary channel>** — <why>
+- **<Blog / landing page>** — SEO and demo content
+- **<Email>** — for prospects who opt in
 - Deprioritize channels your ICP doesn't use; don't plan campaigns there unless the founder directs.
 
 ## Rules

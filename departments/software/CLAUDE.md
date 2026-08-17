@@ -1,11 +1,13 @@
 # Software Department
 
+> ⚠️ Fill in the stack and repo below via **`/scaffold-company`** or by editing directly.
+
 ## Stack
-- **Language:** Go and Node — polyglot, chosen per-service based on what fits best.
-- **Framework:** Per-service, fit-for-purpose (no company-wide mandate). Event bus: Kafka.
-- **Repo:** none yet (local: `/Users/oofin008/Dev/PERSONAL/qr-order-system`)
-- **Test framework:** Idiomatic default per language — Go's built-in `testing` package for Go services, Jest/Vitest for Node services. No single company-wide mandate.
-- **Other key tools:** Kubernetes (container orchestration), Kafka (event bus), microservices architecture partitioned by store.
+- **Language:** <LANGUAGE>
+- **Framework:** <FRAMEWORK(S)>
+- **Repo:** <REPO_URL> (local: <LOCAL_PATH>)
+- **Test framework:** <TEST_FRAMEWORK>
+- **Other key tools:** <ORM, DB, infra, etc. — list what the team must know>
 
 ## Canonical engineering standard
 - If you maintain a "how we build software here" doc (coding conventions, architecture,
@@ -14,7 +16,7 @@
 
 ## Conventions
 - Branch naming: `feat/SHORT-DESC`, `fix/SHORT-DESC`
-- Cut feature branches from the integration branch (`develop`), not from `main`.
+- Cut feature branches from the integration branch (e.g. `develop`/`ai-company`), not from `main`.
 - Commit style: Conventional Commits (`feat:`, `fix:`, `chore:`, etc.)
 - One PR per feature/fix. Small PRs preferred.
 - Tests required for every change. New code without tests = not done.
@@ -23,11 +25,11 @@
 ## CI / CD
 - CI runs on every PR. Must be green to merge.
 - Deployment is **human-only**. Agents never deploy.
-- TBD — deployment target not yet decided. Likely Kubernetes-based given the confirmed infra stack; to be finalized as part of this quarter's architecture/infra design work.
+- <Describe how/where the product is deployed or distributed.>
 
 ## Where things live
-- No source tree yet — repo and service layout to be established as architecture/infra design lands (current OKR).
-- Expect a per-service directory layout once services are scaffolded (microservices, partitioned by store).
+- <key source dir> — <what's there>
+- <key source dir> — <what's there>
 - Active issues: GitHub Issues, label `dept:software`
 
 ## Acceptance criteria template (use in every issue)
