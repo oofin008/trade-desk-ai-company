@@ -1,72 +1,79 @@
 # Company Memory
 
-> ⚠️ **NOT FILLED IN YET.** This is a blank template. Run **`/scaffold-company`**
-> (or invoke the `init` agent) and answer its questions — it will replace every
-> `<…>` placeholder below with your real company. Until then, agents have no
-> product context to work from.
-
-**Last updated:** <YYYY-MM-DD>
-**Maintained by:** CEO orchestrator (with input from all department heads)
-
 This is the source of truth for everything the company knows about itself, its customers, and its market. Every agent reads this on every invocation. Keep it concise — link to detailed docs rather than inlining them.
+
+**Last updated:** 2026-08-07
+**Maintained by:** CEO orchestrator (with input from all department heads)
 
 ---
 
 ## Company
-- **Name:** <Company name>
-- **One-line pitch:** <One sentence: what it is, for whom, and the core value.>
-- **Stage:** <Idea / Validating / Building / Launched / Scaling>
-- **Founder:** <Name> — sole human, accessible via Discord.
+- **Name:** SSTR Solutions
+- **One-line pitch:** Customers scan a table QR code (or a global/restaurant QR code), browse the menu, place an order, pay, and receive a queue number — confirmed orders push straight to a Kitchen Display System (KDS).
+- **Stage:** Validating
+- **Founder:** Boss Thann — sole human, accessible via Discord.
 
 ## Product
-- **What it is:** <2–4 sentences describing the product and its primary users / workflows.>
-- **Status:** <What exists today vs. what's still to build.>
-- **Repo:** <github.com/org/repo, or "none yet">
+- **What it is:** A QR-code ordering and queue-management system for restaurants. Customers scan a QR code (table-level or store-level), browse the menu, order, pay, and get a guaranteed unique queue number. Confirmed orders are pushed live to a Kitchen Display System (KDS) for the kitchen to fulfill.
+- **Status:** Nothing built yet — building from scratch. This quarter's focus is architecture/infra design before implementation.
+- **Repo:** none yet (local path: `/Users/oofin008/Dev/PERSONAL/qr-order-system`)
 
 ### Key features (shipped / planned)
-- <Feature — one line>
-- <Feature — one line>
+- QR-code ordering (table QR or global/store QR) — no app install, works in any phone browser
+- Payment orchestration at time of order
+- Queue number management — unique, sequential, daily reset, guaranteed-correct per store
+- Live push of confirmed orders to Kitchen Display System (KDS)
 
 ### Key technical constraints
-- <Constraint, platform requirement, or hard limit the team must respect.>
+- Microservices, event-driven architecture (Kafka as the event bus)
+- Partitioned by store
+- Must work on any phone browser — no app install required
+- Polyglot services (Go and Node — chosen per-service, "fit for purpose")
+- Kubernetes for container orchestration
+- No single company-wide test framework mandate — idiomatic default per language (Go's built-in `testing` package for Go services; Jest/Vitest for Node services)
 
 ## ICP (Ideal Customer Profile)
-- **Who:** <Specific segment — role, company size, context. Not "everyone".>
-- **Pain we solve:** <The concrete problem they have today.>
-- **What they use today:** <Current tools / workarounds / competitors.>
-- **Where they hang out:** <Communities, forums, channels where you can reach them.>
+- **Who:** Restaurant owners — both QSR chains and independent restaurants.
+- **Pain we solve:** Long queues, high order-taking labor cost (cashiers/waiters), and order accuracy errors from manual order-taking.
+- **What they use today:** Manual labor — cashiers and waiters taking orders by hand. No QR/digital ordering system in place.
+- **Where they hang out:** TBD — research pending. Founder does not yet know which communities/channels reach restaurant owners; this needs a `research-brief` from Product/Researcher once the company is live.
 
 ## Positioning
-- **Category:** <The market category you compete in.>
-- **Against:** <Main alternatives and their weaknesses.>
-- **Unique angle:** <Why a customer picks you over the alternatives.>
+- **Category:** QR ordering & queue management for restaurants.
+- **Against:**
+  - FoodStory — QR ordering app, but dine-in only (no queue management).
+  - QueQ — queue management app, but can't take orders or payment.
+  - Manual order-taking (cashiers/waiters) — highest labor cost, most error-prone.
+- **Unique angle:** SSTR is the only one that combines ordering + payment + queue management in a single system, across dine-in and takeout use cases — reducing labor cost long-term instead of just digitizing one piece of the workflow.
 
 ## Brand voice (for Marketing)
-- **Tone:** <e.g. practical and direct / playful / technical.>
-- **Never say:** <Banned words/clichés — e.g. "revolutionize", "AI-powered", "seamless".>
-- **Always say:** <What to lean into — concrete benefits, specific workflows, real proof.>
+- **Tone:** Practical and direct.
+- **Never say:** "revolutionize", "seamless", "AI-powered" — generic clichés with no evidence.
+- **Always say:** Concrete claims — labor cost reduction, queue number accuracy/guarantee, no-app-install / any-phone-browser.
 
 ## Current OKRs
-- **Objective:** <The single most important outcome this quarter.>
-- **KR1:** <Measurable result>
-- **KR2:** <Measurable result>
-- **KR3:** <Measurable result>
+- **Objective:** Ship an MVP.
+- **KR1:** Architecture and infra design finalized and documented (event-driven microservices, Kafka event bus, store-partitioned, K8s).
+- **KR2:** Core order → payment → queue number → KDS flow working end-to-end in a test/staging environment.
+- **KR3:** MVP demoable and ready to bring to a first pilot restaurant conversation.
 
 ## Known customers / pipeline
-- <None yet, or list. Sales keeps detail in departments/sales/PIPELINE.md.>
+- None yet. Sales keeps detail in `departments/sales/PIPELINE.md`.
 
 ## GTM model
-- <How you reach customers and deliver the product — channels, distribution, motion.>
+- Direct outreach — founder-led sales to land the first restaurants (both QSR chains and independent restaurants).
 
 ## Pricing / licensing model
-- <Pricing tiers, billing model, or "not decided yet".>
+- Not fully decided. Under consideration: per-store subscription, or a transaction/payment fee cut. Revisit once pilot economics are clearer.
 
 ## Open questions
-- <Unresolved strategic questions the team should keep visible.>
+- Which channels/communities actually reach restaurant-owner ICP (research pending — see ICP "where they hang out").
+- Per-store subscription vs. transaction fee pricing — which model to commit to.
+- Which services go in Go vs. Node — to be decided per-service as build starts.
 
 ---
 
 ## Recent learnings (append-only, dated)
 Format: `YYYY-MM-DD [dept]: what we learned, why it matters`
 
-- <YYYY-MM-DD> [system]: Company memory initialized from the template.
+- 2026-08-07 [system]: Company scaffolded via /scaffold-company.
