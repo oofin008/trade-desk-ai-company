@@ -1,0 +1,31 @@
+name: Discord agents
+
+# Unit tests for the runner's pure helpers (scripts/discord-agents/lib): the
+# [[JOB]]/[[SUMMARY]] marker parsing and chain-depth guard, and the ${VAR}
+# resolution that builds each agent's MCP config. The runner-integration side
+# (Discord gateway + spawning claude) isn't practical to test here, so these
+# helpers are deliberately kept pure and covered.
+on:
+  push:
+    paths:
+      - 'scripts/discord-agents/**'
+      - '.github/workflows/discord-agents.yml'
+  pull_request:
+    paths:
+      - 'scripts/discord-agents/**'
+      - '.github/workflows/discord-agents.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Syntax-check the runner
+        working-directory: scripts/discord-agents
+        run: node --check agent-runner.js
+      - name: Run lib tests
+        working-directory: scripts/discord-agents
+        run: npm test

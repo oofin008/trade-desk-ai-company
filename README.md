@@ -30,24 +30,24 @@ ai-company-template/
 ├── CLAUDE.md                          # Top-level operating manual (hard rules, Discord protocol)
 ├── README.md                          # This file
 ├── adl/                              # Agent Definition Language — SOURCE OF TRUTH for agents
-│   ├── agents/*.adl.yaml             #   14 declarative specs (edit these)
+│   ├── agents/*.adl.yaml             #   15 declarative specs (edit these)
 │   ├── prompts/*.md                  #   system-prompt bodies (edit these)
 │   ├── schema/agent.schema.json      #   the spec contract (JSON Schema)
 │   ├── backends/claude-code.mjs      #   compiles specs → .claude/agents + roster.json
 │   └── validate.mjs · compile.mjs    #   `npm run build` in adl/  (see adl/README.md)
 ├── .claude/
 │   ├── settings.json                  # Permissions, spend limits, allowed/denied tools
-│   ├── agents/                        # 14 agents — GENERATED from adl/, do not hand-edit
+│   ├── agents/                        # 15 agents — GENERATED from adl/, do not hand-edit
 │   │   ├── init.md                ←  scaffolds a fresh company (run /scaffold-company)
 │   │   ├── ceo.md
 │   │   ├── head-of-software.md    →  dev, qa
-│   │   ├── head-of-product.md     →  researcher, analyst
+│   │   ├── head-of-product.md     →  researcher, analyst, ux-designer
 │   │   ├── head-of-marketing.md   →  copywriter, designer, analyst
 │   │   └── head-of-sales.md       →  sdr (outbound), ae (inbound)
 │   ├── commands/                      # /scaffold-company, /standup, /directive, /review-queue
-│   └── skills/                        # 17 role playbooks (plain files — not ADL-generated)
+│   └── skills/                        # 18 role playbooks (plain files — not ADL-generated)
 ├── .github/workflows/                 # Auto-route issues, setup labels
-├── .mcp.json                          # GitHub + Discord MCPs
+├── .mcp.json                          # GitHub + Discord + Stitch MCPs
 ├── company/                           # ← all BLANK placeholders until you scaffold
 │   ├── memory/{COMPANY.md, BRIEF.md, ACTIVITY.md}
 │   ├── decisions/LOG.md
@@ -59,6 +59,8 @@ ai-company-template/
 │   └── sales/{CLAUDE.md, PIPELINE.md}
 └── scripts/
     ├── discord-agents/                # Each agent is its own bot in one channel (preferred)
+    │   ├── agent-runner.js            #   one long-lived process per bot (pm2); supervises jobs
+    │   └── lib/{jobs,mcp-config}.js   #   [[JOB]] markers · ${VAR}-resolved MCP config (+ tests)
     └── discord-bridge/                # Legacy single-driver bridge (fallback)
 ```
 
@@ -70,9 +72,10 @@ ai-company-template/
 
 **Department heads (4):** `head-of-software`, `head-of-product`, `head-of-marketing`, `head-of-sales`.
 
-**Specialists (8):**
+**Specialists (9):**
 - Software: `dev` (writes code), `qa` (reviews diffs, catches bugs)
-- Product: `researcher` (qualitative), `analyst` (quantitative — shared with marketing)
+- Product: `researcher` (qualitative), `analyst` (quantitative — shared with marketing),
+  `ux-designer` (user flows, wireframes, HTML mockups, design-system specs)
 - Marketing: `copywriter` (text), `designer` (HTML/SVG mockups), `analyst` (shared)
 - Sales: `sdr` (outbound, Haiku for volume), `ae` (inbound, qualifying warm leads)
 
@@ -97,6 +100,21 @@ npm run check        # verify artifacts are in sync (CI runs this)
 Commit the specs **and** the regenerated artifacts together. `.github/workflows/adl.yml` fails
 the build if they drift, and the artifacts are marked `linguist-generated`. Full reference:
 **`adl/README.md`**.
+
+## Read order — what an agent follows, highest priority first
+
+Every turn resolves through the same stack. Higher layers constrain or override lower ones:
+
+1. **`.claude/settings.json`** — harness-enforced permissions, spend limits, model default. Not optional; the CLI enforces it regardless of what an agent decides.
+2. **Root `CLAUDE.md`** — hard rules (draft-don't-ship, reversible-only, stay-in-lane, update memory, log decisions, log activity). Explicitly overrides default behavior.
+3. **ADL specs → compiled artifacts** — `adl/agents/<name>.adl.yaml` + `adl/prompts/<name>.md` are the source of truth; `adl/backends/claude-code.mjs` compiles them into `.claude/agents/<name>.md` (what Claude Code actually loads for `--agent <name>`) and `scripts/discord-agents/roster.json`. CI fails the build on drift, so this is a strict one-way pipeline — never hand-edit the generated files.
+4. **Each agent's own "Read first" list** — every compiled `.claude/agents/<name>.md` prescribes its own order, typically: root `CLAUDE.md` → `company/memory/COMPANY.md` → its `departments/<dept>/CLAUDE.md`.
+5. **Company memory** — `company/memory/BRIEF.md` (short-form, read by default for cost discipline) before the full `COMPANY.md`; plus `ACTIVITY.md` (append-only feed) and `company/decisions/LOG.md` (append-only decisions) and `company/BUDGET.md` (checked before recommending spend).
+6. **Department `CLAUDE.md`** — role-specific conventions and stack (`departments/<dept>/CLAUDE.md`).
+7. **Skills** (`.claude/skills/<name>/SKILL.md`) — step-by-step playbooks invoked on demand for *how* to do a piece of work. They encode the hard rules above, they don't override them.
+8. **Per-turn Discord preamble** — `scripts/discord-agents/agent-runner.js` appends a `--append-system-prompt` at invocation time (bot identity, mention/peer list, hop-budget note, "read BRIEF.md first"). This is layered in last, so it's the final word for that specific turn.
+
+GitHub Issues (`dept:*` / `status:*` labels) sit outside this stack as the durable record of cross-department handoffs — Discord mentions are live coordination, issues are what persists.
 
 ## Setup (one-time)
 
@@ -138,8 +156,22 @@ From the repo, run `claude` to start a session.
 
 ### Discord
 Each agent is its own bot in one shared channel. Address one with `@ceo` / `@head-of-software`;
-it replies as itself and hands off to peers by `@mention`. Founder controls: `/status`,
-`/freeze`, `/unfreeze`, `/reset`. Full details in `scripts/discord-agents/README.md`.
+it replies as itself and hands off to peers by `@mention`.
+
+Founder controls — **global** (any agent acks): `/status` (hops, spend, frozen, per-agent context
+size), `/freeze`, `/unfreeze`, `/reset`. **Per-agent** (address the bot you mean, e.g.
+`@head-of-software /stop`): `/stop` cancels that agent's in-flight turn, `/redirect <instructions>`
+cancels it and immediately starts a fresh turn with new instructions. Both jump the queue; ordinary
+messages still wait their turn.
+
+**Background jobs.** A turn is one disposable `claude --print` process, so a head that "backgrounds"
+a specialist and then finishes its reply kills that work instead of delivering it. For work too long
+for one turn, a head ends its reply with `[[JOB agent=dev]]…[[/JOB]]`; `agent-runner.js` (long-lived
+under pm2, unlike the turn) opens a Discord thread, runs that specialist as its own top-level
+invocation, posts the result, then resumes the head's session so it reacts normally — QA, open a PR,
+update memory. Chained jobs stay in the same thread, capped at `MAX_JOB_CHAIN_DEPTH`.
+
+Full details in `scripts/discord-agents/README.md`.
 
 ## The non-negotiable rules
 
