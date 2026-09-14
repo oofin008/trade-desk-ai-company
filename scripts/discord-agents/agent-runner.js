@@ -31,6 +31,8 @@ import {
   loadRoster, makeIdStore, rewriteOutgoing, humanizeMentions,
   nameForId, addressesName, mentionsAnyAgent
 } from './lib/mentions.js';
+import { extractJobs, extractSummary, canChainJob } from './lib/jobs.js';
+import { buildResolvedMcpConfig } from './lib/mcp-config.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 loadEnvFile(resolve(here, '..', '..', '.env'));
@@ -44,8 +46,10 @@ const {
   HOP_BUDGET = '30',
   MAX_CONCURRENCY = '2',
   CLAUDE_TIMEOUT_MINUTES = '30',
+  JOB_TIMEOUT_MINUTES = '180',
   SESSION_USD_LIMIT = '5',
-  DAILY_USD_LIMIT = '20'
+  DAILY_USD_LIMIT = '20',
+  SOFTWARE_REPO_PATHS = ''
 } = process.env;
 
 if (!AGENT_NAME || !DISCORD_CHANNEL_ID || !AI_STARTUP_DIR) {
@@ -55,6 +59,14 @@ if (!AGENT_NAME || !DISCORD_CHANNEL_ID || !AI_STARTUP_DIR) {
 
 const projectDir = resolve(AI_STARTUP_DIR);
 const stateDir = join(projectDir, '.discord-agents');
+// Local clones of the software repos this company builds, comma-
+// separated. Paths are per-machine so they live in .env (gitignored), not
+// committed config. Example: SOFTWARE_REPO_PATHS=/path/to/repo-a,/path/to/repo-b
+const softwareRepoDirs = SOFTWARE_REPO_PATHS
+  .split(',')
+  .map((p) => p.trim())
+  .filter(Boolean)
+  .map((p) => resolve(p));
 const roster = loadRoster(here);
 const me = roster.find((r) => r.name === AGENT_NAME);
 if (!me) {
@@ -69,9 +81,48 @@ if (!token) {
   process.exit(1);
 }
 
+// MCP servers (github / discord / stitch). `claude --print` loads MCP only when
+// passed `--mcp-config <file> --strict-mcp-config`. We resolve the `${VAR}`
+// placeholders in the repo-root `.mcp.json` from the runner's own env (already
+// loaded by loadEnvFile above) into a private per-agent tmp file, and pass it
+// only to MCP-enabled agents (Stitch is heavy; dev/qa have no use for it).
+// Runtime-only: `pm2 restart all` to pick up changes, no hot reload.
+// Enabled agents: `roster.json` entries with a non-empty `mcp` array (compiled
+// from `capabilities.mcp` in the agent's ADL spec), plus `ux-designer`.
+const mcpEnabledAgents = new Set(
+  roster.filter((r) => Array.isArray(r.mcp) && r.mcp.length > 0).map((r) => r.name)
+);
+// ux-designer is a dispatched specialist job, not a bot, so it's not in
+// roster.json — but its `capabilities.mcp: [stitch]` is declared in
+// adl/agents/ux-designer.adl.yaml. The runner special-cases it here.
+mcpEnabledAgents.add('ux-designer');
+const resolvedMcpConfigPath = buildResolvedMcpConfig(projectDir, AGENT_NAME, process.env);
+if (resolvedMcpConfigPath) {
+  console.log(`[${AGENT_NAME}] MCP config resolved → ${resolvedMcpConfigPath} (this agent MCP-enabled: ${mcpEnabledAgents.has(AGENT_NAME)})`);
+}
+
+// Extra CLI args that enable MCP for `agentName`, or [] when MCP is unavailable
+// or this agent isn't on the allowlist (its args stay byte-for-byte unchanged).
+function mcpArgsFor(agentName) {
+  if (!resolvedMcpConfigPath || !mcpEnabledAgents.has(agentName)) return [];
+  return ['--mcp-config', resolvedMcpConfigPath, '--strict-mcp-config'];
+}
+
 const hopBudget = Math.max(1, parseInt(HOP_BUDGET, 10));
 const maxConcurrency = Math.max(1, parseInt(MAX_CONCURRENCY, 10));
 const timeoutMs = Math.max(1, parseFloat(CLAUDE_TIMEOUT_MINUTES)) * 60 * 1000;
+const jobTimeoutMs = Math.max(1, parseFloat(JOB_TIMEOUT_MINUTES)) * 60 * 1000;
+// How many jobs a head may chain from job-followup turns before the runner
+// refuses to start more (runaway-chain guard — see issue #1). Counts jobs
+// chained *beyond* the original (dev=depth0 -> qa=depth1 -> fix=depth2 ...);
+// at the cap the chain pauses and pings the founder.
+// Bumped 3 -> 12 (founder, 2026-08-31): a real multi-task build phase runs
+// dev->QA->(fix->QA)->merge->next-dev serially, ~3-5 hops per task over many
+// tasks — a cap of 3 stalled the chain after ~1 task and needed a manual
+// channel nudge every time. 12 covers a full phase segment while still
+// bounding a runaway loop. Revisit if a phase legitimately needs deeper
+// chains (better: reset the counter on any human channel message).
+const MAX_JOB_CHAIN_DEPTH = 12;
 const spendLimits = {
   sessionLimit: parseFloat(SESSION_USD_LIMIT) || 0,
   dailyLimit: parseFloat(DAILY_USD_LIMIT) || 0
@@ -90,13 +141,35 @@ const useSession = (process.env.AGENT_MEMORY || 'session').toLowerCase() !== 'of
 const store = makeStore(stateDir);
 const idStore = makeIdStore(stateDir);
 
-// Per-agent Claude session ids (name -> sessionId), shared file so /reset can
-// wipe everyone's memory at once. We resume our own id each turn.
+// Per-agent Claude session ids (name -> { id, contextTokens, updatedAt }),
+// shared file so /reset can wipe everyone's memory at once and /status can
+// read every agent's context size. We resume our own id each turn.
+// contextTokens is this agent's most recent turn's cache_read +
+// cache_creation + input tokens — an approximation of how large its resumed
+// session's context currently is (see usageTokens below). It only ever grows
+// until a /reset, since --resume carries the whole history forward each turn.
+// Older entries may still be a bare session-id string (pre-tracking format);
+// loadSessionId/contextTokensFor accept both.
 const sessionsPath = join(stateDir, 'sessions.json');
 const readSessions = () => { try { return JSON.parse(readFileSync(sessionsPath, 'utf8')); } catch { return {}; } };
-const loadSessionId = () => (useSession ? readSessions()[AGENT_NAME] || null : null);
-const saveSessionId = (id) => { const m = readSessions(); m[AGENT_NAME] = id; writeFileSync(sessionsPath, JSON.stringify(m, null, 2)); };
+const loadSessionId = () => {
+  if (!useSession) return null;
+  const entry = readSessions()[AGENT_NAME];
+  if (!entry) return null;
+  return typeof entry === 'string' ? entry : entry.id;
+};
+const saveSessionId = (id, contextTokens) => {
+  const m = readSessions();
+  const prev = m[AGENT_NAME];
+  const prevTokens = prev && typeof prev === 'object' ? prev.contextTokens : undefined;
+  m[AGENT_NAME] = { id, contextTokens: contextTokens ?? prevTokens, updatedAt: new Date().toISOString() };
+  writeFileSync(sessionsPath, JSON.stringify(m, null, 2));
+};
 const clearAllSessions = () => { try { writeFileSync(sessionsPath, '{}'); } catch {} };
+// Warn (in /status) once an agent's tracked context crosses this — purely a
+// visibility cue for the founder, nothing here auto-resets.
+const CONTEXT_WARN_TOKENS = 120000;
+const formatTokens = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}K` : `${n}`);
 
 // Wipe downloaded Discord attachments (see saveAttachments). Cleared on /reset
 // alongside sessions/ledger so a reset leaves no stale files on disk.
@@ -148,14 +221,79 @@ const queue = [];
 let working = false;
 const seen = new Set(); // dedup message ids across reconnects
 
+// The turn currently running (if any) — { proc, finish } — so /stop and
+// /redirect can act on it directly instead of waiting behind it in the queue.
+let activeTurn = null;
+
+// Kill the in-flight claude process (if one is running) and settle its promise
+// immediately. Returns true if something was actually running.
+function interruptActiveTurn() {
+  if (!activeTurn) return false;
+  const { proc, finish } = activeTurn;
+  try { process.kill(-proc.pid, 'SIGTERM'); } catch {}
+  finish({ text: '', cost: 0, errored: false, interrupted: true, raw: 'interrupted by founder' });
+  return true;
+}
+
+// /stop and /redirect must be able to act on a turn that's already running, so
+// they're intercepted here — before the FIFO queue — rather than inside
+// handle(), which only ever runs once the current turn has finished.
+async function maybeHandleInterrupt(message) {
+  const fromHuman = !message.author.bot;
+  if (!fromHuman || !allowedUsers.has(message.author.id)) return false;
+
+  const ids = idStore.load();
+  const addressed =
+    addressesName(message, AGENT_NAME, client.user.id, client.user.username) ||
+    (isPrimary && !mentionsAnyAgent(message, ids, allAgentNames));
+  if (!addressed) return false;
+
+  const body = humanizeMentions(message.content, ids)
+    .replace(new RegExp(`@${AGENT_NAME}\\b`, 'gi'), '')
+    .trim();
+  const lower = body.toLowerCase();
+
+  if (lower === '/stop') {
+    if (interruptActiveTurn()) {
+      await safeReact(message, '⏹️');
+      await send(message.channel, `⏹️ ${AGENT_NAME}: stopped — current task cancelled.`);
+    } else {
+      await send(message.channel, `${AGENT_NAME}: nothing in progress to stop.`);
+    }
+    return true;
+  }
+
+  if (lower.startsWith('/redirect')) {
+    const instruction = body.slice('/redirect'.length).trim();
+    if (!instruction) {
+      await send(message.channel, `${AGENT_NAME}: usage — @${AGENT_NAME} /redirect <new instructions>`);
+      return true;
+    }
+    const wasRunning = interruptActiveTurn();
+    await safeReact(message, wasRunning ? '↪️' : '🔄');
+    // Re-enter the normal queue so this still gets hop accounting, the frozen
+    // check, etc. — just tagged so runTurn builds a redirect-flavored prompt
+    // instead of taking the raw "/redirect ..." text literally.
+    message.__redirect = { instruction, wasRunning };
+    queue.push(message);
+    pump();
+    return true;
+  }
+
+  return false;
+}
+
 client.on('messageCreate', (message) => {
   if (message.channelId !== DISCORD_CHANNEL_ID) return;
   if (message.author.id === client.user?.id) return; // never react to self
   if (seen.has(message.id)) return;
   seen.add(message.id);
   if (seen.size > 500) seen.delete(seen.values().next().value);
-  queue.push(message);
-  pump();
+  maybeHandleInterrupt(message).then((handled) => {
+    if (handled) return; // /stop acted immediately; /redirect re-queued itself above
+    queue.push(message);
+    pump();
+  }).catch((e) => console.error(`[${AGENT_NAME}] interrupt check failed`, e));
 });
 
 async function pump() {
@@ -175,19 +313,32 @@ async function handle(message) {
   const fromHuman = !message.author.bot;
   const ids = idStore.load();
 
-  // Founder-only channel commands. Only the primary bot acts/acks so we don't
-  // get five replies; state is shared, so every agent sees the result.
+  // Founder-only global channel commands. Only the primary bot acts/acks so we
+  // don't get five replies; state is shared, so every agent sees the result.
+  // Exact-match only — a bare "/redirect ..." or any other slash-prefixed text
+  // must fall through to normal handling below, not get swallowed here.
   const cmd = message.content.trim().toLowerCase();
-  if (fromHuman && allowedUsers.has(message.author.id) && cmd.startsWith('/')) {
+  const GLOBAL_COMMANDS = new Set(['/freeze', '/unfreeze', '/reset', '/status']);
+  if (fromHuman && allowedUsers.has(message.author.id) && GLOBAL_COMMANDS.has(cmd)) {
     if (!isPrimary) return;
     if (cmd === '/freeze') { await store.setFrozen(true); return ack(message, '🧊 Frozen. Agents will stop responding. `/unfreeze` to resume.'); }
     if (cmd === '/unfreeze') { await store.setFrozen(false); return ack(message, '▶️ Unfrozen. Agents are live again.'); }
     if (cmd === '/reset') { await store.resetAll(); clearAllSessions(); clearAttachments(); return ack(message, '✅ Chain + spend ledger reset, all agents’ memory cleared, and downloaded attachments removed.'); }
     if (cmd === '/status') {
       const s = store.read();
-      return ack(message, `📊 hops ${s.hops}/${hopBudget} · session $${s.ledger.sessionUsd.toFixed(2)}/${spendLimits.sessionLimit} · today $${s.ledger.dailyUsd.toFixed(2)}/${spendLimits.dailyLimit} · ${s.frozen ? '🧊 frozen' : 'live'}`);
+      const sessions = readSessions();
+      const contextLine = allAgentNames
+        .map((n) => {
+          const entry = sessions[n];
+          const tok = entry && typeof entry === 'object' ? entry.contextTokens : undefined;
+          if (!tok) return null;
+          return `${n} ${formatTokens(tok)}${tok >= CONTEXT_WARN_TOKENS ? '⚠️' : ''}`;
+        })
+        .filter(Boolean)
+        .join(' · ');
+      return ack(message, `📊 hops ${s.hops}/${hopBudget} · session $${s.ledger.sessionUsd.toFixed(2)}/${spendLimits.sessionLimit} · today $${s.ledger.dailyUsd.toFixed(2)}/${spendLimits.dailyLimit} · ${s.frozen ? '🧊 frozen' : 'live'}${contextLine ? `\n🧠 ${contextLine}` : ''}`);
     }
-    return; // unknown command — ignore
+    return;
   }
 
   // Ignore unauthorized humans entirely (no spend, no noise).
@@ -230,9 +381,17 @@ async function handle(message) {
 
 async function runTurn(message, ids) {
   const fromName = message.author.bot ? (nameForId(message.author.id, ids) || 'another agent') : 'the founder';
-  let body = humanizeMentions(message.content, ids)
-    .replace(new RegExp(`@${AGENT_NAME}\\b`, 'gi'), '')
-    .trim();
+  let body;
+  if (message.__redirect) {
+    const { instruction, wasRunning } = message.__redirect;
+    body = wasRunning
+      ? `[Founder interrupted your previous task to redirect you]\nNew instructions: ${instruction}`
+      : instruction;
+  } else {
+    body = humanizeMentions(message.content, ids)
+      .replace(new RegExp(`@${AGENT_NAME}\\b`, 'gi'), '')
+      .trim();
+  }
 
   // Discord attachments: download them to a Claude-readable path and tell the
   // agent to Read them (the CLI takes text on stdin, but its Read tool can open
@@ -264,9 +423,14 @@ async function runTurn(message, ids) {
     console.log(`[${AGENT_NAME}] stored session ${resumeId} not found — starting fresh`);
     res = await runClaude(prompt, preamble, null);
   }
-  const { text, cost, errored, raw, sessionId } = res;
-  if (useSession && sessionId) saveSessionId(sessionId);
+  const { text, cost, errored, raw, sessionId, interrupted, contextTokens } = res;
+  if (useSession && sessionId) saveSessionId(sessionId, contextTokens);
   const secs = ((Date.now() - t0) / 1000).toFixed(1);
+  if (interrupted) {
+    // /stop or /redirect already sent their own message; nothing more to say.
+    console.log(`[${AGENT_NAME}] ⏹ interrupted after ${secs}s`);
+    return;
+  }
   console.log(`[${AGENT_NAME}] ${errored ? '✗ error' : '✓ done'} in ${secs}s · $${(cost || 0).toFixed(4)}`);
 
   // Account for spend; remind (do NOT freeze) if over the configured limits.
@@ -286,14 +450,223 @@ async function runTurn(message, ids) {
     if (!message.author.bot) await send(message.channel, `(${AGENT_NAME}: no output)`);
     return; // stay silent on empty bot-to-bot turns to avoid noise
   }
-  out = rewriteOutgoing(out, idStore.load()) + frozenNote;
-  await send(message.channel, out);
+
+  // Pull out any [[JOB agent=...]]...[[/JOB]] blocks before posting — those are
+  // instructions to the runner, not something the founder should see raw.
+  const { text: visible, jobs } = extractJobs(out);
+  out = rewriteOutgoing(visible, idStore.load()) + frozenNote;
+  const sent = await send(message.channel, out || `(${AGENT_NAME}: started a background job — see thread below)`);
+
+  // Jobs run detached from this turn/queue: they must NOT block pump() from
+  // handling the next Discord message, otherwise a long job just reintroduces
+  // the same "can't respond while busy" problem it exists to solve.
+  for (const job of jobs) {
+    const anchor = sent[sent.length - 1] || message;
+    startJob(anchor, job).catch((e) => console.error(`[${AGENT_NAME}] job failed to start`, e.message));
+  }
+}
+
+// Open the Discord thread for a fresh, top-level job (only ever called once
+// per job dispatch out of a normal turn — see runTurn) and hand off the
+// actual run to runJob, which is shared with chained job dispatches.
+async function startJob(anchorMessage, job) {
+  const { agent, prompt } = job;
+  let thread;
+  try {
+    thread = await anchorMessage.startThread({
+      name: `${agent}: ${prompt.replace(/\s+/g, ' ').slice(0, 80)}`,
+      autoArchiveDuration: 1440
+    });
+  } catch (e) {
+    console.error(`[${AGENT_NAME}] could not open thread for job (${agent})`, e.message);
+    await send(anchorMessage.channel, `⚠️ ${AGENT_NAME}: couldn't open a thread for the ${agent} job (${e.message}) — it did not run.`);
+    return;
+  }
+  await runJob(thread, job, 0);
+}
+
+// Run one job to completion in an already-open Discord thread, entirely
+// independent of this turn/process's own lifecycle. This is the actual fix
+// for "agents that say they'll ping back but don't": a Task-tool background
+// subagent dies the moment this turn's `claude --print` process exits,
+// because nothing outlives that process to deliver its result later.
+// agent-runner.js itself, by contrast, is a long-lived process (kept alive by
+// pm2) — so it, not the model, is what supervises the job and posts the
+// result whenever it lands.
+//
+// Shared between a fresh top-level job (via startJob, depth 0) and a job
+// chained from a follow-up turn (via runJobFollowup, depth > 0) — reusing the
+// same thread keeps the whole trail (e.g. dev -> QA -> PR reaction) coherent
+// in one place instead of scattering it across threads (issue #1).
+async function runJob(thread, job, depth) {
+  const { agent, prompt } = job;
+  console.log(`[${AGENT_NAME}] ▶ job started (depth ${depth}): ${agent} — "${prompt.replace(/\s+/g, ' ').slice(0, 100)}"`);
+  await send(thread, `▶️ ${agent} started — will report back in this thread when done.`);
+
+  await store.acquireSlot(maxConcurrency);
+  const t0 = Date.now();
+  let res;
+  try {
+    res = await runSpecialistJob(agent, prompt);
+  } finally {
+    await store.releaseSlot();
+  }
+  const secs = ((Date.now() - t0) / 1000).toFixed(1);
+  if (res.cost) await store.addSpend(res.cost, spendLimits);
+  console.log(`[${AGENT_NAME}] ${res.errored ? '✗ job error' : '✓ job done'} (${agent}) in ${secs}s`);
+
+  if (res.errored) {
+    await send(thread, `❌ ${agent} hit an error after ${secs}s:\n\`\`\`\n${(res.raw || 'no output').slice(0, 1200)}\n\`\`\`\n${founderTag()} — this needs a look.`);
+    return;
+  }
+
+  const resultText = (res.text || '(no output)').trim();
+  // Strip the [[SUMMARY]] block (if the specialist included one, per its
+  // preamble in runSpecialistJob) before showing the human the full reply —
+  // the block is for the runner, not the thread.
+  const { text: displayText, summary } = extractSummary(resultText);
+  await send(thread, `✅ ${agent} finished in ${secs}s:\n\n${displayText.slice(0, 1800)}`);
+
+  // Let the dispatching head react to the result in its own session — QA,
+  // open a PR, update memory — exactly as it would if the work had finished
+  // synchronously inside its own turn. Posted into the same thread. Only the
+  // bounded summary (not the full reply) goes into that session's permanent
+  // history, so a long chain of jobs doesn't balloon its context turn over
+  // turn (see extractSummary). Fall back to a tail slice — the verdict is
+  // usually near the end — if the specialist didn't include a summary block.
+  const contextSummary = summary || displayText.slice(-1200);
+  await runJobFollowup(thread, agent, prompt, contextSummary, depth);
+}
+
+// Resume the dispatching head's own session with the finished job's result so
+// it can continue its normal workflow, and post its reaction to the thread.
+// depth is the depth of the job that just finished (0 for the original,
+// top-level job) — used to guard against unbounded chained-job dispatch below.
+async function runJobFollowup(thread, jobAgent, jobPrompt, contextSummary, depth = 0) {
+  const preamble = [
+    `You are operating as a Discord bot named "${AGENT_NAME}" in the company's shared channel.`,
+    `To hand work to a peer, mention them by name with @ — e.g. @head-of-software. Available peers: ${peerNames.map((n) => '@' + n).join(', ')}.`,
+    `Only mention a peer when you genuinely need them; each mention spawns their agent and costs tokens.`,
+    `Keep replies short (a few lines). Durable handoffs and records go through GitHub issues; @mentions are for live coordination.`
+  ].join(' ');
+  // contextSummary is a bounded summary, not the job's full output (see
+  // runJob/extractSummary) — the full detail already went to the thread as
+  // its own message, which this session doesn't need to carry forever.
+  const prompt = `[System] The background job you dispatched (${jobAgent}) just finished — its full output was already posted to this thread above.\n\nWhat you asked it to do:\n${jobPrompt}\n\n${jobAgent}'s result (summary):\n${contextSummary}\n\nContinue your normal workflow from here (e.g. QA, open a draft PR, update memory) or say what's blocking you. This reply is posted to the thread the founder is watching, so make it a real status update.`;
+
+  await store.acquireSlot(maxConcurrency);
+  let res;
+  try {
+    res = await runClaude(prompt, preamble, loadSessionId(), { trackInterrupt: false });
+  } finally {
+    // Release BEFORE looking at the result / dispatching any chained job below
+    // — runJob() does its own acquireSlot(), so releasing here first avoids
+    // self-deadlocking on maxConcurrency when a job is chained straight out of
+    // this follow-up turn. Keep this ordering if you touch this function.
+    await store.releaseSlot();
+  }
+  if (useSession && res.sessionId) saveSessionId(res.sessionId, res.contextTokens);
+  if (res.cost) await store.addSpend(res.cost, spendLimits);
+
+  if (res.errored) {
+    await send(thread, `❌ ${AGENT_NAME} hit an error continuing after the ${jobAgent} job:\n\`\`\`\n${(res.raw || 'no output').slice(0, 1200)}\n\`\`\``);
+    return;
+  }
+  const out = (res.text || '').trim();
+  if (!out) return;
+
+  // Same [[JOB]] parsing runTurn() does for main-channel turns — without this,
+  // a head chaining e.g. qa from inside a job's own follow-up turn had its
+  // marker posted as literal text and no job ever started (issue #1).
+  const { text: visible, jobs } = extractJobs(out);
+  if (visible) await send(thread, rewriteOutgoing(visible, idStore.load()));
+
+  if (!jobs.length) return;
+  if (!canChainJob(depth, MAX_JOB_CHAIN_DEPTH)) {
+    await send(thread, `⚠️ ${AGENT_NAME}: hit the chained-job depth limit (${MAX_JOB_CHAIN_DEPTH}) — not starting ${jobs.map((j) => j.agent).join(', ')}. ${founderTag()} take it from here.`);
+    return;
+  }
+  for (const job of jobs) {
+    runJob(thread, job, depth + 1).catch((e) => console.error(`[${AGENT_NAME}] chained job failed to start`, e.message));
+  }
+}
+
+// Run a specialist (dev/qa/researcher/...) as its own top-level, independent
+// claude invocation — NOT a Task-tool subagent nested inside a head's turn, so
+// it isn't torn down when that turn's process exits. Fresh session each job
+// (specialists don't carry memory across jobs, same as when invoked via Task).
+// Deliberately does not set --model: the specialist's own `.claude/agents/
+// <name>.md` frontmatter picks its model, same as when a head invokes it via
+// the Task tool.
+function runSpecialistJob(agentName, prompt) {
+  return new Promise((resolvePromise) => {
+    const preamble = [
+      `You are running as a background job dispatched by "${AGENT_NAME}" via the Discord agent runner (not a live Task-tool subagent call). Do the task described in the prompt end-to-end. Your full reply is posted verbatim to a Discord thread and read by a human, so write it for that audience.`,
+      `After everything else, end your reply with one more block:`,
+      `[[SUMMARY]]`,
+      `<a short, self-contained summary for "${AGENT_NAME}" to react to: verdict/outcome plus every concrete fact it will need to continue — file paths, PR/issue numbers, branch names, pass/fail. Well under 1000 characters.>`,
+      `[[/SUMMARY]]`,
+      `Only this block is kept in "${AGENT_NAME}"'s long-term session memory — everything above it is shown to the human once, then discarded from memory. Do not omit it, and do not put anything "${AGENT_NAME}" needs later outside it.`
+    ].join('\n');
+    const args = [
+      '--print',
+      '--agent', agentName,
+      '--output-format', 'json',
+      '--add-dir', projectDir,
+      ...softwareRepoDirs.flatMap((dir) => ['--add-dir', dir]),
+      '--append-system-prompt', preamble,
+      ...mcpArgsFor(agentName),
+      '--dangerously-skip-permissions'
+    ];
+    const proc = spawn(CLAUDE_CMD, args, { cwd: projectDir, stdio: ['pipe', 'pipe', 'pipe'], detached: true });
+
+    let settled = false;
+    const finish = (result) => { if (!settled) { settled = true; resolvePromise(result); } };
+
+    proc.stdin.write(prompt);
+    proc.stdin.end();
+
+    let stdout = '', stderr = '';
+    proc.stdout.on('data', (d) => { stdout += d.toString(); });
+    proc.stderr.on('data', (d) => { stderr += d.toString(); });
+
+    // Jobs get their own, much longer timeout — they exist specifically for
+    // work that doesn't fit a normal turn's budget.
+    const timer = setTimeout(() => {
+      try { process.kill(-proc.pid, 'SIGTERM'); } catch {}
+      finish({ text: '', cost: 0, errored: true, raw: `job timed out after ${JOB_TIMEOUT_MINUTES} min` });
+    }, jobTimeoutMs);
+
+    proc.on('close', (code) => {
+      clearTimeout(timer);
+      if (code !== 0 && code !== null) {
+        const out = stderr + stdout;
+        if (/usage limit reached/i.test(out)) {
+          finish({ text: '', cost: 0, errored: true, raw: 'Claude usage limit reached — try again after it resets.' });
+          return;
+        }
+        finish({ text: '', cost: 0, errored: true, raw: (stderr || stdout) });
+        return;
+      }
+      try {
+        const j = JSON.parse(stdout);
+        finish({ text: j.result ?? '', cost: j.total_cost_usd ?? 0, errored: !!j.is_error, raw: stdout });
+      } catch {
+        finish({ text: stdout.trim(), cost: 0, errored: false, raw: stdout });
+      }
+    });
+
+    proc.on('error', (err) => {
+      clearTimeout(timer);
+      finish({ text: '', cost: 0, errored: true, raw: `failed to start claude: ${err.message}` });
+    });
+  });
 }
 
 // Run a single scoped claude turn. Resolves { text, cost, errored, raw }.
 // Default: --output-format json (one final blob, quiet). With LOG_AGENT_STEPS=1:
 // --output-format stream-json so each thinking/tool step is logged as it happens.
-function runClaude(prompt, preamble, resumeId) {
+function runClaude(prompt, preamble, resumeId, { trackInterrupt = true } = {}) {
   return new Promise((resolvePromise) => {
     const args = [
       '--print',
@@ -303,10 +676,27 @@ function runClaude(prompt, preamble, resumeId) {
       ...(logSteps ? ['--verbose'] : []),
       ...(resumeId ? ['--resume', resumeId] : []),
       '--add-dir', projectDir,
+      ...softwareRepoDirs.flatMap((dir) => ['--add-dir', dir]),
       '--append-system-prompt', preamble,
+      ...mcpArgsFor(AGENT_NAME),
       '--dangerously-skip-permissions'
     ];
     const proc = spawn(CLAUDE_CMD, args, { cwd: projectDir, stdio: ['pipe', 'pipe', 'pipe'], detached: true });
+
+    // Settle exactly once, whether via the process's own close/error event or
+    // via interruptActiveTurn() killing it early from a /stop or /redirect.
+    // trackInterrupt is false for job-followup turns (see runJobFollowup) so
+    // they don't fight the foreground queue's turn over the activeTurn slot —
+    // /stop only ever targets the queue's current turn, not a job followup.
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      if (trackInterrupt && activeTurn && activeTurn.proc === proc) activeTurn = null;
+      resolvePromise(result);
+    };
+    if (trackInterrupt) activeTurn = { proc, finish };
+
     proc.stdin.write(prompt);
     proc.stdin.end();
 
@@ -328,7 +718,7 @@ function runClaude(prompt, preamble, resumeId) {
 
     const timer = setTimeout(() => {
       try { process.kill(-proc.pid, 'SIGTERM'); } catch {}
-      resolvePromise({ text: '', cost: 0, errored: true, raw: `timed out after ${CLAUDE_TIMEOUT_MINUTES} min` });
+      finish({ text: '', cost: 0, errored: true, raw: `timed out after ${CLAUDE_TIMEOUT_MINUTES} min` });
     }, timeoutMs);
 
     proc.on('close', (code) => {
@@ -336,31 +726,41 @@ function runClaude(prompt, preamble, resumeId) {
       if (code !== 0 && code !== null) {
         const out = stderr + stdout;
         if (/usage limit reached/i.test(out)) {
-          resolvePromise({ text: '', cost: 0, errored: true, raw: 'Claude usage limit reached — try again after it resets.' });
+          finish({ text: '', cost: 0, errored: true, raw: 'Claude usage limit reached — try again after it resets.' });
           return;
         }
-        resolvePromise({ text: '', cost: 0, errored: true, raw: (stderr || stdout) });
+        finish({ text: '', cost: 0, errored: true, raw: (stderr || stdout) });
         return;
       }
       if (logSteps) {
-        if (final) resolvePromise({ text: final.result ?? '', cost: final.total_cost_usd ?? 0, errored: !!final.is_error, raw: stdout, sessionId: final.session_id });
-        else resolvePromise({ text: stdout.trim(), cost: 0, errored: false, raw: stdout });
+        if (final) finish({ text: final.result ?? '', cost: final.total_cost_usd ?? 0, errored: !!final.is_error, raw: stdout, sessionId: final.session_id, contextTokens: usageTokens(final.usage) });
+        else finish({ text: stdout.trim(), cost: 0, errored: false, raw: stdout });
         return;
       }
       // --output-format json -> a single result object with result + total_cost_usd.
       try {
         const j = JSON.parse(stdout);
-        resolvePromise({ text: j.result ?? '', cost: j.total_cost_usd ?? 0, errored: !!j.is_error, raw: stdout, sessionId: j.session_id });
+        finish({ text: j.result ?? '', cost: j.total_cost_usd ?? 0, errored: !!j.is_error, raw: stdout, sessionId: j.session_id, contextTokens: usageTokens(j.usage) });
       } catch {
-        resolvePromise({ text: stdout.trim(), cost: 0, errored: false, raw: stdout });
+        finish({ text: stdout.trim(), cost: 0, errored: false, raw: stdout });
       }
     });
 
     proc.on('error', (err) => {
       clearTimeout(timer);
-      resolvePromise({ text: '', cost: 0, errored: true, raw: `failed to start claude: ${err.message}` });
+      finish({ text: '', cost: 0, errored: true, raw: `failed to start claude: ${err.message}` });
     });
   });
+}
+
+// Approximate size of a resumed session's context from one turn's usage block:
+// cache_read (prior context reused from cache) + cache_creation (new context
+// this turn, now cached) + input (uncached tokens this turn). Since --resume
+// carries the whole prior conversation forward, this is a reasonable proxy
+// for "how big is this agent's session right now" — see CONTEXT_WARN_TOKENS.
+function usageTokens(usage) {
+  if (!usage) return undefined;
+  return (usage.cache_read_input_tokens || 0) + (usage.cache_creation_input_tokens || 0) + (usage.input_tokens || 0);
 }
 
 // Parse one NDJSON line from stream-json mode: log readable steps, and hand the
@@ -420,10 +820,30 @@ function founderTag() {
   return first ? `<@${first}>` : 'the founder';
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// A turn can run for minutes; if the gateway drops mid-turn (DNS blip, network
+// hiccup) and hasn't finished reconnecting by the time we try to post the
+// result, channel.send can fail transiently ("Expected token to be set for
+// this request, but none was present" is the discord.js symptom of exactly
+// this race). Retrying with backoff gives the reconnect a chance to finish
+// instead of the turn's entire result — the thing it was working on for
+// however long — silently vanishing.
 async function send(channel, text) {
+  const sent = [];
   for (const chunk of chunkMessage(text, 1900)) {
-    try { await channel.send(chunk); } catch (e) { console.error(`[${AGENT_NAME}] send failed`, e.message); }
+    let ok = false;
+    for (let attempt = 1; attempt <= 3 && !ok; attempt++) {
+      try {
+        sent.push(await channel.send(chunk));
+        ok = true;
+      } catch (e) {
+        console.error(`[${AGENT_NAME}] send failed (attempt ${attempt}/3)`, e.message);
+        if (attempt < 3) await sleep(attempt * 3000);
+      }
+    }
   }
+  return sent;
 }
 async function ack(message, text) { await safeReact(message, '✅'); await send(message.channel, text); }
 async function safeReact(message, emoji) { try { await message.react(emoji); } catch {} }

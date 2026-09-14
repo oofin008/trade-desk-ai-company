@@ -6,7 +6,8 @@
   "main": "agent-runner.js",
   "scripts": {
     "start": "node launcher.js",
-    "start:one": "node agent-runner.js"
+    "start:one": "node agent-runner.js",
+    "test": "node --test lib/"
   },
   "dependencies": {
     "discord.js": "^14.15.0"

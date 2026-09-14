@@ -9,11 +9,18 @@
 // Per-agent bot tokens, DISCORD_CHANNEL_ID, ALLOWED_USER_IDS, etc. are read
 // from the repo-root .env by the runner (see lib/chunk.js loadEnvFile).
 
+const path = require('node:path');
 const roster = require('./roster.json');
+
+// pm2 process names are namespaced by this company's own directory name, so
+// running more than one AI company on the same machine doesn't collide (two
+// companies would otherwise both want `agent-ceo`). Rename the directory and
+// the processes rename with it — `pm2 delete all` first if you do.
+const ns = path.basename(path.resolve(__dirname, '..', '..'));
 
 module.exports = {
   apps: roster.map((entry, i) => ({
-    name: `agent-${entry.name}`,
+    name: `${ns}-agent-${entry.name}`,
     script: 'agent-runner.js',
     cwd: __dirname,
     // Pin the absolute path to the claude CLI. pm2's PATH differs from the

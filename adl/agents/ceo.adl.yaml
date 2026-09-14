@@ -18,7 +18,6 @@ capabilities:
     - Bash
     - Glob
     - Grep
-    - Task
 interaction:
   canMention:
     - head-of-product

@@ -20,6 +20,8 @@ capabilities:
     - Task
     - WebSearch
     - WebFetch
+  mcp:
+    - stitch
 interaction:
   canMention:
     - head-of-software

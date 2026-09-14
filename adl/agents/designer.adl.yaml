@@ -16,6 +16,8 @@ capabilities:
     - Glob
     - Grep
     - WebSearch
+  mcp:
+    - stitch
 guardrails:
   draftsOnly: true
   inherits:

@@ -19,7 +19,7 @@ A single human founder steers the company via Discord. You and your fellow agent
 ## Skills (reusable playbooks)
 Each role's core capability is packaged as a **skill** in `.claude/skills/<name>/SKILL.md` — a step-by-step playbook with its output path and guardrails. Invoke the matching skill via the Skill tool instead of improvising the workflow:
 - CEO `route-directive` · Software `plan-implementation` · Dev `implement-task` · QA `qa-review`
-- Product `write-spec` · Researcher `research-brief` · Analyst `analyze-data`
+- Product `write-spec` · Researcher `research-brief` · Analyst `analyze-data` · UX/UI Designer `design-interface`
 - Marketing `plan-campaign` (+ `strategic-planner`, `content-calendar`, `competitive-positioning`, `growth-experiments`) · Copywriter `draft-copy` · Designer `design-asset`
 - Sales `plan-outbound` · SDR `prospect-research` · AE `qualify-lead`
 
@@ -57,7 +57,7 @@ The company runs in one Discord channel where **each agent is its own bot** (`sc
 - **Auto-chaining is bounded by a hop budget.** Agent→agent hops are capped per founder message; at the cap the chain pauses and pings the founder. Don't try to defeat this.
 - **Mentions are live coordination; GitHub Issues are the record of record.** Durable cross-department handoffs still go through an issue (per *How work flows*). A mention without a backing issue is fine for a quick question, not for delegating real work.
 - **Log direct-mention work to the activity feed.** When the founder (or a peer) pings you directly and the CEO isn't in the loop, the CEO can't see what you did. Before ending such a turn, append a one-line entry to `company/memory/ACTIVITY.md` (hard rule 6). The CEO reads that feed to catch up and fold anything durable into `COMPANY.md`/`BRIEF.md`.
-- **Cost discipline (hard requirement):** keep replies short; read `company/memory/BRIEF.md` for state instead of the full `COMPANY.md` unless you need the detail; never escalate to Opus by default. Founder commands `/freeze`, `/unfreeze`, `/reset`, `/status` control the system.
+- **Cost discipline (hard requirement):** keep replies short; read `company/memory/BRIEF.md` for state instead of the full `COMPANY.md` unless you need the detail; never escalate to Opus by default. Founder commands `/freeze`, `/unfreeze`, `/reset`, `/status` control the system; `/stop` and `/redirect <instructions>` (addressed to a specific agent, e.g. `@head-of-software /stop`) cancel or redirect that agent's in-flight turn.
 
 When invoked via the **legacy single-driver bridge** (`scripts/discord-bridge/bridge.js`, kept as a fallback), the same stdout rule applies. In both modes: do **not** call the `discord_send` MCP tool to reply, and do not rely on it being available in headless `--print` mode.
 

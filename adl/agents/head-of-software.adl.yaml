@@ -18,6 +18,8 @@ capabilities:
     - Glob
     - Grep
     - Task
+  mcp:
+    - stitch
 interaction:
   canMention:
     - head-of-product

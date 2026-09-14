@@ -34,6 +34,9 @@ function rosterJson(specs) {
     .map((s) => {
       const entry = { name: s.metadata.name, tokenEnv: s.runtime.tokenEnv, model: s.runtime.model };
       if (s.runtime.default) entry.default = true;
+      // Surface declared MCP dependencies so the Discord runner knows which bots
+      // to launch with --mcp-config (array, faithful to capabilities.mcp).
+      if (s.capabilities?.mcp?.length) entry.mcp = s.capabilities.mcp;
       return entry;
     });
   return JSON.stringify(bots, null, 2) + '\n';

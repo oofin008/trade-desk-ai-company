@@ -13,7 +13,10 @@
   {
     "name": "head-of-product",
     "tokenEnv": "DISCORD_TOKEN_PRODUCT",
-    "model": "sonnet"
+    "model": "sonnet",
+    "mcp": [
+      "stitch"
+    ]
   },
   {
     "name": "head-of-sales",
@@ -23,6 +26,9 @@
   {
     "name": "head-of-software",
     "tokenEnv": "DISCORD_TOKEN_SOFTWARE",
-    "model": "sonnet"
+    "model": "sonnet",
+    "mcp": [
+      "stitch"
+    ]
   }
 ]
