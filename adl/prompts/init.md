@@ -26,12 +26,15 @@ as you go. Cover, in roughly this order:
 4. **Positioning & voice** — category; main alternatives and their weaknesses; unique angle;
    brand tone; words to never say (clichés) and what to lean into.
 5. **Goals** — this quarter's objective + 2–3 measurable key results (OKRs).
-6. **GTM & pricing** — how you reach + deliver; pricing/licensing model (or "not decided").
-7. **Engineering** — language, framework(s), repo URL + local path, test framework, other key
-   tools (ORM/DB/infra), integration branch name.
-8. **Marketing channels** — the 2–4 channels where the ICP actually decides.
-9. **Budget** — monthly discretionary budget per department (Software/Product/Marketing/Sales),
-   or "$0 for now".
+6. **GTM & pricing** — how the desk is funded (own capital / outside LPs / fund structure);
+   fee/carry model if applicable (or "not decided").
+7. **Trading infra** — venues/exchanges in scope, instruments (spot/perps/options), initial
+   capital base, quant/execution stack (language, data feeds, backtesting tools), custody setup
+   (self-custody / qualified custodian / exchange-held), jurisdictions the desk operates in.
+8. **Risk & compliance parameters** — starting leverage/position limits (or "TBD, Risk sets on
+   hire"), jurisdictions requiring licensing, any known regulatory constraints.
+9. **Budget** — monthly discretionary budget per office (Front Office/Middle Office/Back
+   Office/Cross-cutting), or "$0 for now".
 
 Don't invent facts. If the founder doesn't know something yet, write `TBD` (or "not decided")
 rather than guessing — half-filled is fine, fabricated is not.
@@ -44,17 +47,19 @@ Replace placeholders (don't just append) in:
 - **`company/memory/BRIEF.md`** — a ≤20-line digest derived from COMPANY.md (the bullets:
   Company, Stage+repo, ICP, Unique angle, GTM, Pricing, Current OKR, Brand voice, Watch-out).
   This is what agents read every turn — keep it tight.
-- **`departments/software/CLAUDE.md`** — fill the Stack block (language, framework, repo, test
-  framework, tools) and the "Where things live" + integration-branch convention.
-- **`departments/marketing/CLAUDE.md`** — fill the Channels block with the real channels.
-- **`company/BUDGET.md`** — set the per-department numbers, the month/year header, and
+- **`departments/front-office/CLAUDE.md`** — fill the venues/instruments in scope, the quant/
+  execution stack, and the strategy-mandate conventions.
+- **`departments/middle-office/CLAUDE.md`** — fill starting risk limits (or "TBD") and the
+  licensing/jurisdiction checklist.
+- **`departments/cross-cutting/CLAUDE.md`** — fill the custody setup and entity/jurisdiction info.
+- **`company/BUDGET.md`** — set the per-office numbers, the month/year header, and
   "Last updated" to today. Update the Total row to match.
 - **`company/decisions/LOG.md`** — replace the example "Company founded" stub with a real dated
   entry capturing the founding operating model and anything decided during the interview
-  (e.g. integration branch, draft-don't-ship default, model tiers).
-- **`departments/sales/PIPELINE.md`** — set "Last updated" to today (leave the pipeline empty).
+  (e.g. starting risk limits, custody approach, draft-don't-ship default, model tiers).
 - **`scripts/discord-agents/roster.json`** — only if the founder wants a non-default model for a
-  head (e.g. Opus for `head-of-software`); otherwise leave all on `sonnet`.
+  head (e.g. Opus for `head-of-trading`); otherwise leave all on `sonnet`. This file is generated
+  by `cd adl && npm run compile` from the ADL specs — don't hand-edit it for anything structural.
 
 After writing each file, do a quick read-back to confirm no `<…>` placeholders remain in the
 sections you were responsible for.
@@ -63,7 +68,7 @@ sections you were responsible for.
 End your turn with a concise checklist the founder must do by hand (you cannot do these):
 
 1. **Discord bots** — create one bot application per agent (5 total) and put the tokens in `.env`
-   (`DISCORD_TOKEN_CEO/PRODUCT/SOFTWARE/MARKETING/SALES`), plus `DISCORD_CHANNEL_ID`,
+   (`DISCORD_TOKEN_CEO/TRADING/RISK/OPERATIONS/SECURITY`), plus `DISCORD_CHANNEL_ID`,
    `ALLOWED_USER_IDS`, `AI_STARTUP_DIR`. Full walkthrough: `scripts/discord-agents/README.md`.
 2. **GitHub** — set `GITHUB_TOKEN` in `.env`, then `gh workflow run setup-labels.yml` (once) to
    create the dept + status labels.

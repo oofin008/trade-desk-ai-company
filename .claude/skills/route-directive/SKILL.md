@@ -1,6 +1,6 @@
 ---
 name: route-directive
-description: CEO playbook for turning a founder directive into a routed, multi-department plan. Restate the goal, decide which departments are involved and in what order, surface risks, and wait for confirmation before delegating. Use when a directive spans departments or sets a company-level priority.
+description: CEO playbook for turning a founder directive into a routed, multi-office plan. Restate the goal, decide which offices are involved and in what order, surface risks, and wait for confirmation before delegating. Use when a directive spans offices or sets a company-level priority.
 ---
 
 # Route a founder directive
@@ -13,12 +13,12 @@ The CEO's job is routing and integration, not doing the work. Use this when a fo
 
 ## Procedure
 1. **Restate the goal** in one sentence. If you can't, the directive is ambiguous — ask the founder one sharp question.
-2. **Decompose** into department-level work items. Map each to exactly one owner: `head-of-software`, `head-of-product`, `head-of-marketing`, `head-of-sales`.
-3. **Sequence** the work. Note dependencies (e.g. Software must ship before Marketing announces).
+2. **Decompose** into office-level work items. Map each to exactly one owner: `head-of-trading` (Front Office), `risk-manager` (Middle Office), `head-of-operations` (Back Office), `security-engineer` (Cross-cutting).
+3. **Sequence** the work. Note dependencies (e.g. Risk must sign off before Trading scales a strategy).
 4. **List risks/unknowns** — anything you'd want the founder to confirm before spending tokens or money.
 5. **Wait for confirmation** before delegating, unless the directive explicitly said "go."
 6. **Delegate** by mentioning the head(s) you need, or open GitHub Issues for durable handoffs.
-7. **Integrate** results across departments and **update `company/memory/COMPANY.md`** with anything cross-cutting.
+7. **Integrate** results across offices and **update `company/memory/COMPANY.md`** with anything cross-cutting.
 
 ## Output shape
 ```

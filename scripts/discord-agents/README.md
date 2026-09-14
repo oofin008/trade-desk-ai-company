@@ -1,14 +1,15 @@
 # Discord Agents — multi-agent company in one channel
 
-Each agent (`ceo` + the four department heads) runs as its **own Discord bot** in
-one shared channel. You address an agent with `@ceo` / `@head-of-software`, it
+Each agent (`ceo` + the four office heads) runs as its **own Discord bot** in
+one shared channel. You address an agent with `@ceo` / `@head-of-trading`, it
 replies *as itself*, and it hands off to a peer by mentioning them — which is a
 real ping that the peer's bot receives. **Discord is the message bus**; there is
 no central router.
 
-Specialists (`dev`, `qa`, `designer`, `analyst`, `researcher`, `copywriter`,
-`sdr`, `ae`) are **not** bots — they still run as `Task`-tool subagents *inside*
-the relevant head's invocation, exactly as before.
+Specialists (`trader`, `quant-researcher`, `execution-engineer`,
+`compliance-officer`, `treasury-manager`, `accountant`, `legal-counsel`) are
+**not** bots — they still run as `Task`-tool subagents *inside* the relevant
+head's invocation, exactly as before.
 
 > Supersedes `scripts/discord-bridge/` (single-driver mode). Keep the old bridge
 > around as a fallback during transition; retire it once this is validated.
@@ -16,10 +17,10 @@ the relevant head's invocation, exactly as before.
 ## How it works
 
 ```
-You: @head-of-software ship the QR payment feature
-  head-of-software  (its bot runs `claude --print --agent head-of-software`)
-    → spawns dev + qa via the Task tool internally (not separate bots)
-    → posts: "Drafted PR #42. @ceo done, @head-of-marketing FYI for launch"
+You: @head-of-trading approve the new funding-basis strategy
+  head-of-trading  (its bot runs `claude --print --agent head-of-trading`)
+    → spawns quant-researcher + execution-engineer via the Task tool internally (not separate bots)
+    → posts: "Backtest checks out, connector deployed to paper. @risk-manager for sign-off"
        (the @mentions are rewritten to real pings → those bots fire)
   ...auto-chaining continues until the HOP_BUDGET is reached, then it pauses
      and pings you for direction.
@@ -34,7 +35,7 @@ You: @head-of-software ship the QR payment feature
 
 You need **one Discord bot application per agent** (5 total). For each one:
 
-1. https://discord.com/developers/applications → **New Application** (name it e.g. `ceo`, `head-of-software`, …).
+1. https://discord.com/developers/applications → **New Application** (name it e.g. `ceo`, `head-of-trading`, …).
 2. **Bot** → Reset Token → copy it. Enable **Message Content Intent**.
 3. **OAuth2 → URL Generator** → scopes `bot`; permissions: `Send Messages`, `Read Message History`, `Add Reactions`, `Create Public Threads`, `Send Messages in Threads` (the last two power the background-job mechanism below). Open the URL and invite the bot into your server.
 4. Set the bot's **username** to match its roster name (so `@name` autocompletes), or just type `@name` as plain text — the runner matches both.
@@ -49,10 +50,10 @@ deny rule) — add these manually:
 ```bash
 # One token per agent (names match roster.json -> tokenEnv)
 DISCORD_TOKEN_CEO=...
-DISCORD_TOKEN_PRODUCT=...
-DISCORD_TOKEN_SOFTWARE=...
-DISCORD_TOKEN_MARKETING=...
-DISCORD_TOKEN_SALES=...
+DISCORD_TOKEN_TRADING=...
+DISCORD_TOKEN_RISK=...
+DISCORD_TOKEN_OPERATIONS=...
+DISCORD_TOKEN_SECURITY=...
 
 DISCORD_CHANNEL_ID=...           # the one shared channel
 ALLOWED_USER_IDS=...             # your Discord user id(s), comma-separated — REQUIRED in practice
@@ -94,7 +95,7 @@ pm2 keeps each agent alive, restarts on crash, and can survive reboot. It is
 global install, prefix every command with `npx ` (e.g. `npx pm2 list`).
 
 Each agent runs as a pm2 process named **`agent-<name>`** (`agent-ceo`,
-`agent-head-of-software`, …), defined in `ecosystem.config.cjs`.
+`agent-head-of-trading`, …), defined in `ecosystem.config.cjs`.
 
 ```bash
 # Install (run yourself — global npm installs are denied to the agent)
@@ -130,8 +131,8 @@ pm2 flush                     # clear stored logs
 
 ```bash
 pm2 restart all               # after editing the runner or roster.json
-pm2 restart agent-software    # one agent
-pm2 stop agent-sales          # stop without removing
+pm2 restart agent-head-of-trading   # one agent
+pm2 stop agent-risk-manager   # stop without removing
 pm2 delete all                # remove from pm2's list entirely
 ```
 
@@ -148,7 +149,7 @@ missing `DISCORD_TOKEN_*` or the bot's Message Content Intent isn't enabled).
 - `/unfreeze` — resume
 - `/reset` — clear the chain + spend ledger + **all agents' memory** + downloaded attachments
 
-**Per-agent** (address the specific bot you mean, e.g. `@head-of-software /stop` — a bare `/stop` with no mention targets the default recipient, `ceo`):
+**Per-agent** (address the specific bot you mean, e.g. `@head-of-trading /stop` — a bare `/stop` with no mention targets the default recipient, `ceo`):
 
 - `/stop` — cancel that agent's **in-flight** turn immediately. Bypasses the FIFO queue entirely (that's the point — it doesn't wait behind the running task), so it works even mid-task. If nothing is running, it just says so.
 - `/redirect <new instructions>` — same as `/stop`, but immediately starts a fresh turn with the new instructions instead of just cancelling. The agent's session memory is untouched, so it still has the interrupted task in context (told explicitly that it was interrupted) — it just isn't allowed to keep working on it. If nothing was running, this behaves like a normal message.
@@ -158,13 +159,13 @@ Ordinary messages sent while an agent is mid-task are unaffected by either of th
 ## Background jobs (long-running work)
 
 **Why this exists:** a head's turn runs as one disposable `claude --print` process
-(see "How it works" above). If that turn dispatches `dev`/`qa` via the Task tool's
-background mode and then wraps up its own reply, the whole process exits — and
-anything still running inside it, including that "background" subagent, dies with
-it. There's also nothing left alive to receive a completion notification later.
-This showed up for real: dev sessions got killed mid-work by the parent turn
-exiting, and a "background" ping actually meant "the process was killed," not
-"the task finished."
+(see "How it works" above). If that turn dispatches a specialist via the Task
+tool's background mode and then wraps up its own reply, the whole process exits
+— and anything still running inside it, including that "background" subagent,
+dies with it. There's also nothing left alive to receive a completion
+notification later. This showed up for real: specialist sessions got killed
+mid-work by the parent turn exiting, and a "background" ping actually meant
+"the process was killed," not "the task finished."
 
 The fix: heads are instructed (see `adl/prompts/<head>.md`) to dispatch
 specialists **synchronously** by default — the head's own Discord reply, posted
@@ -174,9 +175,9 @@ For work that's genuinely too long for one turn, a head ends its reply with a
 job marker instead of faking a background dispatch:
 
 ```
-[[JOB agent=dev]]
-Implement task 4: order-service menu model migration + JWT-protected CRUD
-(issue #27, task 4). Acceptance criteria: ...
+[[JOB agent=quant-researcher]]
+Backtest the funding-basis strategy across the last 3 regimes with realistic
+fees/slippage (issue #27). Report Sharpe, drawdown, and known biases.
 [[/JOB]]
 ```
 
@@ -185,10 +186,10 @@ supervises this, because it's the one thing in this stack that's actually
 long-lived (kept alive by pm2 across every turn):
 
 1. Strips the marker from the visible reply before posting it.
-2. Opens a **Discord thread** off that message (`dev: implement task 4…`).
-3. Spawns `dev` as its own independent `claude --print --agent dev` process —
-   a sibling top-level invocation the runner owns directly, not a Task-tool
-   subagent nested inside the dispatching head's (already-finished) turn.
+2. Opens a **Discord thread** off that message (`quant-researcher: backtest funding-basis…`).
+3. Spawns `quant-researcher` as its own independent `claude --print --agent quant-researcher`
+   process — a sibling top-level invocation the runner owns directly, not a
+   Task-tool subagent nested inside the dispatching head's (already-finished) turn.
 4. When that process closes — seconds or hours later, doesn't matter — posts
    its result into the thread.
 5. Resumes the dispatching head's own session so it reacts normally (QA, open
@@ -203,19 +204,19 @@ separate from `CLAUDE_TIMEOUT_MINUTES`, which is for normal chat turns).
 
 **Chaining jobs from a job's own follow-up turn.** Step 5 above is a real
 turn — the head can end *that* reply with another `[[JOB agent=...]]` marker
-too (e.g. "dev finished, now dispatch qa"), and the runner parses and
-dispatches it exactly like it does for a normal channel turn (fixes issue #1,
-where this marker used to get posted to Discord as literal text and no job
-ever started). A chained job:
+too (e.g. "backtest finished, now dispatch execution-engineer to build the
+connector"), and the runner parses and dispatches it exactly like it does for
+a normal channel turn (fixes issue #1, where this marker used to get posted to
+Discord as literal text and no job ever started). A chained job:
 
 - **Lands in the same thread** — no new thread is opened, so the whole trail
-  (dev → QA → PR reaction) stays coherent in one place.
+  (research → build → review) stays coherent in one place.
 - **Is capped at a chain depth of `MAX_JOB_CHAIN_DEPTH`** (12, beyond the
   original job — bumped from 3 on 2026-08-31 since a real multi-task build
-  phase runs dev→QA→(fix→QA)→merge→next-dev serially) — the runner refuses to
-  start a chained dispatch past that and instead pings the founder in the
-  thread to take it from there, so a head can't accidentally loop jobs
-  forever.
+  phase runs research→build→(fix→review)→deploy→next-task serially) — the
+  runner refuses to start a chained dispatch past that and instead pings the
+  founder in the thread to take it from there, so a head can't accidentally
+  loop jobs forever.
 
 **Summary blocks — keeping chained jobs from ballooning context.** Every
 specialist job's system prompt (set in `runSpecialistJob`) asks the specialist
@@ -225,8 +226,8 @@ dispatching head will need). The runner strips that block before posting the
 full reply to the thread, then feeds *only the block's contents* back into the
 dispatching head's resumed session in step 5 above — not the full reply. Since
 a resumed session's history only ever grows until `/reset`, folding in a whole
-dev diff + test output + QA review on every job in a 12-deep chain would
-otherwise make context balloon fast. If a specialist omits the block (an older
+backtest write-up + connector diff + risk review on every job in a 12-deep
+chain would otherwise make context balloon fast. If a specialist omits the block (an older
 prompt, or it just forgot), the runner falls back to the last ~1200 characters
 of its reply — the tail, since verdicts are usually written last — rather than
 losing the fallback context entirely.
@@ -245,17 +246,16 @@ talk to the head in the main channel instead.
 
 ## MCP servers
 
-The repo-root `.mcp.json` (`github`, `discord`, `stitch`) is now loaded for
-**MCP-enabled agents only**. `claude --print` ignores `.mcp.json` unless it's
-passed explicitly, so at startup the runner:
+The repo-root `.mcp.json` (`github`, `discord`) is loaded for **MCP-enabled
+agents only**. `claude --print` ignores `.mcp.json` unless it's passed
+explicitly, so at startup the runner:
 
 1. Reads `<repo-root>/.mcp.json` (if absent, nothing happens — no MCP, as before).
 2. Resolves every `${VAR}` in it from the runner's own env (the same `.env` the
    runner already loads). This is required because Claude only interpolates
    `${VAR}` for a stdio server's `env` block, **not** for an http server's
-   `headers` — so `stitch`'s `X-Goog-Api-Key: ${STITCH_API_KEY}` would otherwise
-   be sent literally and 401. An unresolved `${VAR}` (env var missing) is left
-   as-is and logged with the server name.
+   `headers` — an unresolved `${VAR}` (env var missing) is left as-is and
+   logged with the server name.
 3. Writes the resolved JSON to a private per-agent file in the OS temp dir
    (`<company-dir>-agent-mcp-<AGENT_NAME>.json`, mode `0600`, rewritten each
    startup — namespaced by this repo's directory name so two companies on one
@@ -268,10 +268,10 @@ The committed `.mcp.json` is never modified — it keeps its `${VAR}` placeholde
 so no secret is in git.
 
 **Which agents get MCP:** `roster.json` entries with a non-empty `"mcp"` array
-(compiled from `capabilities.mcp` in the agent's ADL spec — currently
-`head-of-product` and `head-of-software`), plus the `ux-designer` specialist,
-which is a dispatched subagent rather than a bot and so is special-cased in the
-runner. Everyone else (`ceo`, other heads, `dev`, `qa`, …) runs exactly as
+(compiled from `capabilities.mcp` in the agent's ADL spec). None of the current
+crypto-desk roles declare one, so this mechanism is currently dormant — add
+`capabilities.mcp` to a role's ADL spec and recompile to enable it for that
+agent. Everyone else (`ceo`, the heads, and every specialist) runs exactly as
 before — their `claude` args are unchanged.
 
 **Runtime-only change** — like any edit to `agent-runner.js` / `roster.json`, it
@@ -287,7 +287,7 @@ why you may see it in more than one file.
 | Where | Sets the model for… | Mechanism |
 |---|---|---|
 | **`roster.json`** (`model` field) | The **5 bots** (`ceo` + 4 heads) when running as Discord agents | passed as `claude --model` by the runner |
-| **`.claude/agents/<name>.md`** (frontmatter `model:`) | The **8 specialists** (`dev`, `qa`, `designer`, `analyst`, `researcher`, `copywriter`, `sdr`, `ae`) when invoked as `Task`-tool subagents inside a head's turn | read by Claude Code for the subagent |
+| **`.claude/agents/<name>.md`** (frontmatter `model:`) | The **7 specialists** (`trader`, `quant-researcher`, `execution-engineer`, `compliance-officer`, `treasury-manager`, `accountant`, `legal-counsel`) when invoked as `Task`-tool subagents inside a head's turn | read by Claude Code for the subagent |
 | **`.claude/settings.json`** (`model`) | Global session default | interactive Claude Code + the legacy `discord-bridge` |
 
 **Precedence for a head running as a bot:** `roster.json` → overrides its `.md`

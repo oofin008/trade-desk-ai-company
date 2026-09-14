@@ -13,13 +13,6 @@
       "env": {
         "DISCORD_TOKEN": "${DISCORD_TOKEN}"
       }
-    },
-    "stitch": {
-      "type": "http",
-      "url": "https://stitch.googleapis.com/mcp",
-      "headers": {
-        "X-Goog-Api-Key": "${STITCH_API_KEY}"
-      }
     }
   }
 }

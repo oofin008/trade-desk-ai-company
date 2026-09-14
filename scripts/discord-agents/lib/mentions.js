@@ -2,7 +2,7 @@
 //
 // Each bot, once connected, writes its own Discord user id into a shared
 // ids.json (name -> botUserId). With that map we can:
-//   - rewriteOutgoing : turn an agent's "@head-of-software" text into a real
+//   - rewriteOutgoing : turn an agent's "@head-of-trading" text into a real
 //                       Discord ping <@id>, so that bot's gateway actually fires
 //   - humanizeMentions: turn incoming <@id> pings back into "@name" so the
 //                       prompt reads naturally for the agent
@@ -30,7 +30,7 @@ export function makeIdStore(stateDir) {
 export function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
 // @name (plain text) -> <@id> (real ping). Longest names first so
-// "head-of-software" isn't partially eaten by a shorter alias.
+// "head-of-trading" isn't partially eaten by a shorter alias.
 export function rewriteOutgoing(text, ids) {
   let out = text;
   for (const name of Object.keys(ids).sort((a, b) => b.length - a.length)) {

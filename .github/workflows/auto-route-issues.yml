@@ -21,10 +21,10 @@ jobs:
 
             // Simple keyword routing. Tune over time.
             const rules = [
-              { label: 'dept:software',  patterns: ['bug', 'crash', 'error', 'implement', 'refactor', 'test', 'ci', 'deploy', 'api', 'endpoint', 'frontend', 'backend', 'database', 'migration'] },
-              { label: 'dept:product',   patterns: ['feature request', 'user research', 'pain point', 'icp', 'spec', 'roadmap', 'pricing', 'positioning'] },
-              { label: 'dept:marketing', patterns: ['campaign', 'launch', 'blog', 'landing page', 'social', 'email blast', 'newsletter', 'ad ', 'seo'] },
-              { label: 'dept:sales',     patterns: ['lead', 'prospect', 'outreach', 'demo request', 'customer call', 'discovery', 'proposal'] },
+              { label: 'dept:front-office',  patterns: ['strategy', 'backtest', 'signal', 'execution', 'latency', 'order routing', 'connectivity', 'venue integration', 'trade', 'position', 'hedge'] },
+              { label: 'dept:middle-office', patterns: ['risk limit', 'exposure', 'leverage', 'breach', 'stress test', 'kyc', 'aml', 'sanctions', 'licensing', 'compliance'] },
+              { label: 'dept:back-office',   patterns: ['reconcile', 'settlement', 'treasury', 'ledger', 'tax', 'audit', 'withdrawal', 'deposit', 'banking'] },
+              { label: 'dept:cross-cutting', patterns: ['key', 'custody', 'multisig', 'incident', 'contract', 'agreement', 'entity', 'jurisdiction', 'security'] },
             ];
 
             const labelsToAdd = new Set();
@@ -34,8 +34,8 @@ jobs:
               }
             }
 
-            // Default to product if nothing matched — Product triages and routes.
-            if (labelsToAdd.size === 0) labelsToAdd.add('dept:product');
+            // Default to Front Office if nothing matched — the desk lead triages and routes.
+            if (labelsToAdd.size === 0) labelsToAdd.add('dept:front-office');
 
             // Add status:todo if no status label present.
             const existingLabels = (issue.labels || []).map(l => l.name);
@@ -66,11 +66,11 @@ jobs:
             const labels = refreshed.data.labels.map(l => l.name);
             const dept = labels.find(l => l.startsWith('dept:'));
             const handler = {
-              'dept:software': 'head-of-software',
-              'dept:product': 'head-of-product',
-              'dept:marketing': 'head-of-marketing',
-              'dept:sales': 'head-of-sales'
-            }[dept] || 'head-of-product';
+              'dept:front-office': 'head-of-trading',
+              'dept:middle-office': 'risk-manager',
+              'dept:back-office': 'head-of-operations',
+              'dept:cross-cutting': 'security-engineer'
+            }[dept] || 'head-of-trading';
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,

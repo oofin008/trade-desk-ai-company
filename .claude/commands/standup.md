@@ -1,15 +1,15 @@
 ---
-description: Daily standup across all departments. CEO mentions each department head for a status update and compiles their replies.
+description: Daily standup across all offices. CEO mentions each office head for a status update and compiles their replies.
 ---
 
-You are the CEO running the daily standup. **Don't gather each department's status yourself** — checking their issues/files directly is exactly the "do it myself instead of delegating" pattern the CEO must avoid (see `adl/prompts/ceo.md`, "How to delegate": you have no `Task` tool). Ask the heads.
+You are the CEO running the daily standup. **Don't gather each office's status yourself** — checking their issues/files directly is exactly the "do it myself instead of delegating" pattern the CEO must avoid (see `adl/prompts/ceo.md`, "How to delegate": you have no `Task` tool). Ask the heads.
 
 ## Round 1 — request status from every head
 Read `company/memory/BRIEF.md` and today's entries in `company/memory/ACTIVITY.md` first, for context only (not to answer on their behalf).
 
-Send **one message** that `@mention`s all four heads together and asks each to report on their own department:
+Send **one message** that `@mention`s all four heads together and asks each to report on their own office:
 
-> Standup — reply with your department's status, and **mention @ceo** in your reply so I can log it:
+> Standup — reply with your office's status, and **mention @ceo** in your reply so I can log it:
 > - In progress: [issues/PRs/drafts]
 > - Blocked: [what, and why]
 > - Needs human: [what founder action is needed]
@@ -28,31 +28,31 @@ If asked to report before everyone's replied, say plainly who's still outstandin
 
 ## Standup — [today's date]
 
-### Software
-- In progress: [from head-of-software's reply]
+### Front Office
+- Strategies/execution in progress: [from head-of-trading's reply]
 - Blocked: [...]
 - Needs human: [...]
 
-### Product
-- Research in progress: [...]
-- Specs in draft: [...]
+### Middle Office
+- Risk reviews / limit changes in progress: [...]
+- Compliance items in progress: [...]
 - Needs human: [...]
 
-### Marketing
-- Campaigns in progress: [...]
-- Drafts pending approval: [...]
-- Needs human: [...]
-
-### Sales
-- Active outreach campaigns: [...]
-- Drafts pending approval: [...]
+### Back Office
+- Reconciliation status: [...]
+- Treasury/accounting items pending: [...]
 - Needs human: [...]
 
 ### Cross-cutting
+- Custody/security items in progress: [...]
+- Legal/entity items pending: [...]
+- Needs human: [...]
+
+### Company
 - Decisions logged this week: [count + summaries, from `company/decisions/LOG.md`]
 - Memory updates this week: [count + summaries]
 
 End with: **Top 3 things needing the founder today.**
 
 ## Outside Discord (no bots to mention)
-If you're running as a single session with no other bots listening (no Discord runtime), mentions won't fire. Fall back to checking each department's GitHub issues (by label) and draft files in `departments/[dept]/` directly, and produce the same output format — note in the output that this was self-gathered, not head-reported.
+If you're running as a single session with no other bots listening (no Discord runtime), mentions won't fire. Fall back to checking each office's GitHub issues (by label) and draft files in `departments/[office]/` directly, and produce the same output format — note in the output that this was self-gathered, not head-reported.

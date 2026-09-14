@@ -16,11 +16,11 @@ jobs:
         with:
           script: |
             const labels = [
-              // Departments
-              { name: 'dept:software',  color: '0e8a16', description: 'Owned by Software department' },
-              { name: 'dept:product',   color: '5319e7', description: 'Owned by Product department' },
-              { name: 'dept:marketing', color: 'd93f0b', description: 'Owned by Marketing department' },
-              { name: 'dept:sales',     color: 'fbca04', description: 'Owned by Sales department' },
+              // Offices
+              { name: 'dept:front-office',  color: '0e8a16', description: 'Owned by Front Office' },
+              { name: 'dept:middle-office', color: '5319e7', description: 'Owned by Middle Office' },
+              { name: 'dept:back-office',   color: 'd93f0b', description: 'Owned by Back Office' },
+              { name: 'dept:cross-cutting', color: 'fbca04', description: 'Owned by Cross-cutting (security, legal)' },
               // Status
               { name: 'status:todo',         color: 'ededed', description: 'Not yet started' },
               { name: 'status:in-progress',  color: 'fef2c0', description: 'Being worked on' },

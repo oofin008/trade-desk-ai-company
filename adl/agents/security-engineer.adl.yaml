@@ -1,0 +1,30 @@
+apiVersion: adl/v1
+kind: Agent
+metadata:
+  name: security-engineer
+  department: cross-cutting
+  tier: head
+  description: Guards the keys — the one failure that ends the firm. Designs custody architecture (cold/hot split, multisig, HSMs), owns key management/rotation/recovery and withdrawal controls, runs access control and incident response. Never optional, never skimped, even lean. Invoke for custody, key-management, security-incident, or legal/entity work.
+runtime:
+  model: sonnet
+  surface: bot
+  tokenEnv: DISCORD_TOKEN_SECURITY
+capabilities:
+  tools:
+    - Read
+    - Write
+    - Edit
+    - Bash
+    - Glob
+    - Grep
+    - Task
+interaction:
+  canMention:
+    - ceo
+  handoffVia: github-issue
+guardrails:
+  draftsOnly: true
+  inherits:
+    - company-hard-rules
+prompt:
+  body: prompts/security-engineer.md

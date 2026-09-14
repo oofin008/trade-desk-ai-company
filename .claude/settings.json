@@ -46,7 +46,10 @@
       "Write(departments/**)",
       "Write(company/**)",
       "WebSearch",
-      "WebFetch"
+      "WebFetch",
+      "Write(.env.*)",
+      "Read(.env)",
+      "Read(.env.*)"
     ],
     "ask": [
       "Bash(git push*)",
@@ -74,9 +77,6 @@
       "Bash(ssh *)",
       "Bash(scp *)",
       "Write(.env)",
-      "Write(.env.*)",
-      "Read(.env)",
-      "Read(.env.*)",
       "Read(**/id_rsa)",
       "Read(**/.ssh/**)"
     ]

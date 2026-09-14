@@ -1,0 +1,25 @@
+apiVersion: adl/v1
+kind: Agent
+metadata:
+  name: compliance-officer
+  department: middle-office
+  tier: specialist
+  description: Owns KYC/AML onboarding, licensing/registration tracking, sanctions screening, and internal policy; manages regulator relationships and reporting. Invoke for any task involving regulated activity, onboarding, or policy, delegated by risk-manager.
+runtime:
+  model: sonnet
+  surface: subagent
+capabilities:
+  tools:
+    - Read
+    - Write
+    - Edit
+    - Glob
+    - Grep
+    - WebSearch
+    - WebFetch
+guardrails:
+  draftsOnly: true
+  inherits:
+    - company-hard-rules
+prompt:
+  body: prompts/compliance-officer.md

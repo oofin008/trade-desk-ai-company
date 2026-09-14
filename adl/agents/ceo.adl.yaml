@@ -20,10 +20,10 @@ capabilities:
     - Grep
 interaction:
   canMention:
-    - head-of-product
-    - head-of-software
-    - head-of-marketing
-    - head-of-sales
+    - head-of-trading
+    - risk-manager
+    - head-of-operations
+    - security-engineer
   handoffVia: github-issue
 guardrails:
   draftsOnly: true

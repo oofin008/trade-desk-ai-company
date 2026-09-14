@@ -1,12 +1,13 @@
-# AI Company — Discord Multi-Agent Template
+# AI Crypto Trading Desk — Discord Multi-Agent Company
 
-A reusable template for running a **multi-agent AI company in a single Discord channel**,
-driven by Claude Code. One human founder steers; a CEO + four department-head bots (Software,
-Product, Marketing, Sales) and their specialist subagents do the work.
+A **multi-agent AI crypto trading desk running in a single Discord channel**, driven by Claude
+Code. One human founder steers; a CEO + four office-head bots (Front Office, Middle Office,
+Back Office, Cross-cutting) and their specialist subagents do the work. The org structure is
+drawn from `crypto-desk-roles.html`'s 11-role desk role book.
 
-This repo ships **blank** — no product baked in. Run **`/scaffold-company`** and the `init`
-agent interviews you and fills in everything (company memory, departments, budgets) so you can
-stand up a fresh AI company in minutes.
+This repo ships with the **org structure defined but the business details still blank**. Run
+**`/scaffold-company`** and the `init` agent interviews you and fills in the rest (capital base,
+venues, risk limits, jurisdictions, budgets) so you can stand up the desk in minutes.
 
 ## Quick start
 
@@ -15,48 +16,49 @@ stand up a fresh AI company in minutes.
 claude
 
 # 2. Scaffold your company (the init agent will interview you):
-/scaffold-company a tool that helps freelance designers invoice clients
+/scaffold-company a discretionary spot/perp desk trading majors on 2-3 CEX venues
 #   ^ the trailing text is optional seed context; you can also run /scaffold-company with no args
 ```
 
-The `init` agent then writes `company/memory/COMPANY.md`, `BRIEF.md`, the department
+The `init` agent then writes `company/memory/COMPANY.md`, `BRIEF.md`, the office
 `CLAUDE.md`s, `BUDGET.md`, and seeds the decision log — and prints the remaining manual setup
 (Discord bots, tokens, GitHub labels).
 
 ## What's in here
 
 ```
-ai-company-template/
+trade-desk-ai-company/
 ├── CLAUDE.md                          # Top-level operating manual (hard rules, Discord protocol)
 ├── README.md                          # This file
+├── crypto-desk-roles.html             # Source role book — 11 roles, 4 offices (reference doc)
 ├── adl/                              # Agent Definition Language — SOURCE OF TRUTH for agents
-│   ├── agents/*.adl.yaml             #   15 declarative specs (edit these)
+│   ├── agents/*.adl.yaml             #   13 declarative specs (edit these)
 │   ├── prompts/*.md                  #   system-prompt bodies (edit these)
 │   ├── schema/agent.schema.json      #   the spec contract (JSON Schema)
 │   ├── backends/claude-code.mjs      #   compiles specs → .claude/agents + roster.json
 │   └── validate.mjs · compile.mjs    #   `npm run build` in adl/  (see adl/README.md)
 ├── .claude/
 │   ├── settings.json                  # Permissions, spend limits, allowed/denied tools
-│   ├── agents/                        # 15 agents — GENERATED from adl/, do not hand-edit
+│   ├── agents/                        # 13 agents — GENERATED from adl/, do not hand-edit
 │   │   ├── init.md                ←  scaffolds a fresh company (run /scaffold-company)
 │   │   ├── ceo.md
-│   │   ├── head-of-software.md    →  dev, qa
-│   │   ├── head-of-product.md     →  researcher, analyst, ux-designer
-│   │   ├── head-of-marketing.md   →  copywriter, designer, analyst
-│   │   └── head-of-sales.md       →  sdr (outbound), ae (inbound)
+│   │   ├── head-of-trading.md     →  trader, quant-researcher, execution-engineer
+│   │   ├── risk-manager.md        →  compliance-officer
+│   │   ├── head-of-operations.md  →  treasury-manager, accountant
+│   │   └── security-engineer.md   →  legal-counsel
 │   ├── commands/                      # /scaffold-company, /standup, /directive, /review-queue
-│   └── skills/                        # 18 role playbooks (plain files — not ADL-generated)
+│   └── skills/                        # 12 role playbooks (plain files — not ADL-generated)
 ├── .github/workflows/                 # Auto-route issues, setup labels
-├── .mcp.json                          # GitHub + Discord + Stitch MCPs
+├── .mcp.json                          # GitHub + Discord MCPs
 ├── company/                           # ← all BLANK placeholders until you scaffold
 │   ├── memory/{COMPANY.md, BRIEF.md, ACTIVITY.md}
 │   ├── decisions/LOG.md
 │   └── BUDGET.md
 ├── departments/
-│   ├── software/CLAUDE.md             # ← blank stack
-│   ├── product/{CLAUDE.md, SPEC_TEMPLATE.md}
-│   ├── marketing/CLAUDE.md            # ← blank channels
-│   └── sales/{CLAUDE.md, PIPELINE.md}
+│   ├── front-office/CLAUDE.md         # ← blank venues/instruments/stack
+│   ├── middle-office/CLAUDE.md        # ← blank risk limits/jurisdictions
+│   ├── back-office/CLAUDE.md          # ← blank venues/banking rails
+│   └── cross-cutting/CLAUDE.md        # ← blank custody/entity setup
 └── scripts/
     ├── discord-agents/                # Each agent is its own bot in one channel (preferred)
     │   ├── agent-runner.js            #   one long-lived process per bot (pm2); supervises jobs
@@ -68,16 +70,18 @@ ai-company-template/
 
 **Scaffolder (1):** `init` — interviews you and fills in the company. Run via `/scaffold-company`.
 
-**Orchestrator (1):** `ceo` — routes between departments, maintains memory.
+**Orchestrator (1):** `ceo` — routes between offices, maintains memory.
 
-**Department heads (4):** `head-of-software`, `head-of-product`, `head-of-marketing`, `head-of-sales`.
+**Office heads (4):** `head-of-trading` (Front Office), `risk-manager` (Middle Office — reports
+independently to the founder/board, not the desk), `head-of-operations` (Back Office),
+`security-engineer` (Cross-cutting).
 
-**Specialists (9):**
-- Software: `dev` (writes code), `qa` (reviews diffs, catches bugs)
-- Product: `researcher` (qualitative), `analyst` (quantitative — shared with marketing),
-  `ux-designer` (user flows, wireframes, HTML mockups, design-system specs)
-- Marketing: `copywriter` (text), `designer` (HTML/SVG mockups), `analyst` (shared)
-- Sales: `sdr` (outbound, Haiku for volume), `ae` (inbound, qualifying warm leads)
+**Specialists (7):**
+- Front Office: `trader` (works orders), `quant-researcher` (signal research/backtesting),
+  `execution-engineer` (exchange connectivity, execution infra)
+- Middle Office: `compliance-officer` (KYC/AML, licensing, sanctions screening)
+- Back Office: `treasury-manager` (capital allocation, liquidity), `accountant` (ledger, tax, audit prep)
+- Cross-cutting: `legal-counsel` (entity structure, agreements, regulatory classification)
 
 ## Agent definitions (ADL)
 
@@ -150,26 +154,26 @@ From the repo, run `claude` to start a session.
 
 ### Commands
 - **`/scaffold-company [idea]`** — (re)initialize the company memory via the `init` agent
-- **`/standup`** — daily status across departments
+- **`/standup`** — daily status across offices
 - **`/directive [your goal]`** — give the CEO something to plan and route
 - **`/review-queue`** — see everything pending human approval
 
 ### Discord
-Each agent is its own bot in one shared channel. Address one with `@ceo` / `@head-of-software`;
+Each agent is its own bot in one shared channel. Address one with `@ceo` / `@head-of-trading`;
 it replies as itself and hands off to peers by `@mention`.
 
 Founder controls — **global** (any agent acks): `/status` (hops, spend, frozen, per-agent context
 size), `/freeze`, `/unfreeze`, `/reset`. **Per-agent** (address the bot you mean, e.g.
-`@head-of-software /stop`): `/stop` cancels that agent's in-flight turn, `/redirect <instructions>`
+`@head-of-trading /stop`): `/stop` cancels that agent's in-flight turn, `/redirect <instructions>`
 cancels it and immediately starts a fresh turn with new instructions. Both jump the queue; ordinary
 messages still wait their turn.
 
 **Background jobs.** A turn is one disposable `claude --print` process, so a head that "backgrounds"
 a specialist and then finishes its reply kills that work instead of delivering it. For work too long
-for one turn, a head ends its reply with `[[JOB agent=dev]]…[[/JOB]]`; `agent-runner.js` (long-lived
+for one turn, a head ends its reply with `[[JOB agent=trader]]…[[/JOB]]`; `agent-runner.js` (long-lived
 under pm2, unlike the turn) opens a Discord thread, runs that specialist as its own top-level
-invocation, posts the result, then resumes the head's session so it reacts normally — QA, open a PR,
-update memory. Chained jobs stay in the same thread, capped at `MAX_JOB_CHAIN_DEPTH`.
+invocation, posts the result, then resumes the head's session so it reacts normally — review,
+approve, update memory. Chained jobs stay in the same thread, capped at `MAX_JOB_CHAIN_DEPTH`.
 
 Full details in `scripts/discord-agents/README.md`.
 
@@ -178,7 +182,7 @@ Full details in `scripts/discord-agents/README.md`.
 Every agent follows these (they live in root `CLAUDE.md`):
 1. **Draft, don't ship.** No publishing, sending, deploying, or charging without explicit human approval.
 2. **Reversible only.** Irreversible action → stop and ask.
-3. **Stay in lane.** Cross-department work goes through the CEO.
+3. **Stay in lane.** Cross-office work goes through the CEO.
 4. **Update memory.** Learnings worth keeping go in `COMPANY.md`.
 5. **Log decisions.** Strategic decisions go in `decisions/LOG.md`.
 
@@ -187,8 +191,8 @@ Every agent follows these (they live in root `CLAUDE.md`):
 - **Spend limits** in `.claude/settings.json` (session/daily/monthly). Adjust to your appetite.
   ⚠️ Field names for spend limits can vary by Claude Code version — check the docs if the
   schema is rejected.
-- **Model defaults:** everything on **Sonnet**; **Haiku** for `sdr`/`qa` (volume/lower stakes);
-  **Opus** only on explicit escalation. Set a role's model in its `adl/agents/<name>.adl.yaml`
+- **Model defaults:** everything on **Sonnet**. **Opus** only on explicit escalation (e.g. a
+  genuinely ambiguous risk or strategy call). Set a role's model in its `adl/agents/<name>.adl.yaml`
   (`runtime.model`), recompile, and log why in `decisions/LOG.md` — don't hand-edit `roster.json`.
 - The Discord runner adds a hop budget, concurrency cap, and a spend ledger that auto-freezes —
   see `scripts/discord-agents/README.md`.
@@ -201,7 +205,8 @@ Every agent follows these (they live in root `CLAUDE.md`):
 
 ## What to build next
 
-Once this is humming, consider: wiring real deployment behind human approval gates; a Customer
-Success agent once you have customers; a Finance agent projecting burn from `BUDGET.md` +
-revenue from `PIPELINE.md`; MCPs for your CRM/email/calendar when you graduate from drafts to
-sending. Don't add these until you've felt the pain of not having them.
+Once this is humming, consider: wiring real order placement behind human approval gates (still
+never auto-live); a dedicated on-call/incident agent once real capital is at risk; MCPs for
+exchange APIs, a data warehouse, or a custody provider when you graduate from drafts and
+paper-trading to signed-off live flows. Don't add these until you've felt the pain of not having
+them.

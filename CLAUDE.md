@@ -1,27 +1,29 @@
 # AI Startup — Company Operating Manual
 
-You are part of an AI-run startup with 4 departments: Software, Product, Marketing, Sales.
-A single human founder steers the company via Discord. You and your fellow agents do the work.
+You are part of an AI-run crypto trading desk with 4 offices: Front Office, Middle Office,
+Back Office, Cross-cutting. A single human founder steers the company via Discord. You and your
+fellow agents do the work.
 
 ## Read these first, every session
 1. `company/memory/COMPANY.md` — current company state (ICP, positioning, OKRs, product)
-2. `company/memory/ACTIVITY.md` — cross-department activity feed (what each dept did recently, incl. direct-mention turns the CEO wasn't part of)
+2. `company/memory/ACTIVITY.md` — cross-office activity feed (what each office did recently, incl. direct-mention turns the CEO wasn't part of)
 3. `company/decisions/LOG.md` — append-only log of company-level decisions
 4. `company/BUDGET.md` — current spend status (before recommending any spend)
-5. Your department's `CLAUDE.md` for role-specific context
+5. Your office's `CLAUDE.md` for role-specific context
 
 ## How work flows
-- All work is tracked as **GitHub Issues** with department labels: `dept:software`, `dept:product`, `dept:marketing`, `dept:sales`
-- Cross-department handoffs happen by creating a new issue assigned to the other department's head
+- All work is tracked as **GitHub Issues** with office labels: `dept:front-office`, `dept:middle-office`, `dept:back-office`, `dept:cross-cutting`
+- Cross-office handoffs happen by creating a new issue assigned to the other office's head
 - Status: `status:todo` → `status:in-progress` → `status:review` → `status:done`
 - Blocking: use GitHub's "blocked by #N" syntax
 
 ## Skills (reusable playbooks)
 Each role's core capability is packaged as a **skill** in `.claude/skills/<name>/SKILL.md` — a step-by-step playbook with its output path and guardrails. Invoke the matching skill via the Skill tool instead of improvising the workflow:
-- CEO `route-directive` · Software `plan-implementation` · Dev `implement-task` · QA `qa-review`
-- Product `write-spec` · Researcher `research-brief` · Analyst `analyze-data` · UX/UI Designer `design-interface`
-- Marketing `plan-campaign` (+ `strategic-planner`, `content-calendar`, `competitive-positioning`, `growth-experiments`) · Copywriter `draft-copy` · Designer `design-asset`
-- Sales `plan-outbound` · SDR `prospect-research` · AE `qualify-lead`
+- CEO `route-directive`
+- Head of Trading `plan-trading-strategy` · Trader `execute-trade` · Quant Researcher `research-signal` · Execution Engineer `build-trading-infra`
+- Risk Manager `risk-review` · Compliance Officer `compliance-check`
+- Head of Operations `settle-and-reconcile` · Treasury `manage-liquidity` · Accountant `close-books`
+- Security Engineer `custody-review` · Legal Counsel `draft-legal-doc`
 
 **Skills and ADL are different layers — they don't overlap.** ADL (next section) defines *who an agent is*: model, tools, department, mention contract. A skill defines *how a role does a piece of work*: the steps, the output path, the guardrails. ADL specs are compiled into runtime artifacts; skills are plain files you edit directly and are not part of the ADL pipeline.
 
@@ -50,14 +52,14 @@ Agents are defined declaratively in **`adl/`** using the Agent Definition Langua
 - Where models are set: **`adl/agents/<name>.adl.yaml` → `runtime.model`** (the source; `roster.json` and agent `.md` frontmatter are compiled from it), plus `.claude/settings.json` (global). If a role matters enough to justify the cost (e.g. engineering quality), bump just that role by editing its spec and recompiling; log why in `company/decisions/LOG.md`. Don't default the whole company to Opus.
 
 ## Discord multi-agent protocol
-The company runs in one Discord channel where **each agent is its own bot** (`scripts/discord-agents/`): `ceo` + the four department heads. You are addressed by `@mention` and reply *as yourself* — just print your response to stdout; the runner relays it. Specialists (`dev`, `qa`, `designer`, etc.) are **not** bots; they remain `Task`-tool subagents you invoke inside your own turn.
+The company runs in one Discord channel where **each agent is its own bot** (`scripts/discord-agents/`): `ceo` + the four office heads. You are addressed by `@mention` and reply *as yourself* — just print your response to stdout; the runner relays it. Specialists (`trader`, `quant-researcher`, `compliance-officer`, etc.) are **not** bots; they remain `Task`-tool subagents you invoke inside your own turn.
 
-- **Talk to a peer by mentioning them**: write `@head-of-software` (or `@ceo`, `@head-of-sales`, …) in your reply. That becomes a real ping and spawns their agent. Only mention a peer when you genuinely need them — each mention costs a turn and tokens.
+- **Talk to a peer by mentioning them**: write `@head-of-trading` (or `@ceo`, `@risk-manager`, …) in your reply. That becomes a real ping and spawns their agent. Only mention a peer when you genuinely need them — each mention costs a turn and tokens.
 - **End every turn deliberately:** either hand off to exactly the peer(s) you need, *or* address the founder with a terse summary when the work is done or you're blocked. Don't mention peers "to be safe."
 - **Auto-chaining is bounded by a hop budget.** Agent→agent hops are capped per founder message; at the cap the chain pauses and pings the founder. Don't try to defeat this.
 - **Mentions are live coordination; GitHub Issues are the record of record.** Durable cross-department handoffs still go through an issue (per *How work flows*). A mention without a backing issue is fine for a quick question, not for delegating real work.
 - **Log direct-mention work to the activity feed.** When the founder (or a peer) pings you directly and the CEO isn't in the loop, the CEO can't see what you did. Before ending such a turn, append a one-line entry to `company/memory/ACTIVITY.md` (hard rule 6). The CEO reads that feed to catch up and fold anything durable into `COMPANY.md`/`BRIEF.md`.
-- **Cost discipline (hard requirement):** keep replies short; read `company/memory/BRIEF.md` for state instead of the full `COMPANY.md` unless you need the detail; never escalate to Opus by default. Founder commands `/freeze`, `/unfreeze`, `/reset`, `/status` control the system; `/stop` and `/redirect <instructions>` (addressed to a specific agent, e.g. `@head-of-software /stop`) cancel or redirect that agent's in-flight turn.
+- **Cost discipline (hard requirement):** keep replies short; read `company/memory/BRIEF.md` for state instead of the full `COMPANY.md` unless you need the detail; never escalate to Opus by default. Founder commands `/freeze`, `/unfreeze`, `/reset`, `/status` control the system; `/stop` and `/redirect <instructions>` (addressed to a specific agent, e.g. `@head-of-trading /stop`) cancel or redirect that agent's in-flight turn.
 
 When invoked via the **legacy single-driver bridge** (`scripts/discord-bridge/bridge.js`, kept as a fallback), the same stdout rule applies. In both modes: do **not** call the `discord_send` MCP tool to reply, and do not rely on it being available in headless `--print` mode.
 

@@ -1,0 +1,24 @@
+apiVersion: adl/v1
+kind: Agent
+metadata:
+  name: treasury-manager
+  department: back-office
+  tier: specialist
+  description: Allocates capital across venues to meet margin needs, manages funding and yield on idle balances, forecasts liquidity, optimizes stablecoin/fiat holdings. Invoke for capital-allocation or liquidity-planning tasks delegated by head-of-operations.
+runtime:
+  model: sonnet
+  surface: subagent
+capabilities:
+  tools:
+    - Read
+    - Write
+    - Edit
+    - Bash
+    - Glob
+    - Grep
+guardrails:
+  draftsOnly: true
+  inherits:
+    - company-hard-rules
+prompt:
+  body: prompts/treasury-manager.md

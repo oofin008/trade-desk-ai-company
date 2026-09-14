@@ -46,24 +46,24 @@ See `schema/agent.schema.json` for the authoritative contract. In brief:
 apiVersion: adl/v1
 kind: Agent
 metadata:
-  name: head-of-software        # kebab-case; must match the filename
-  department: software          # company | product | software | marketing | sales
-  tier: head                    # ceo | head | specialist
-  description: Engineering lead… # emitted verbatim as the runtime description
+  name: head-of-trading          # kebab-case; must match the filename
+  department: front-office       # company | front-office | middle-office | back-office | cross-cutting
+  tier: head                     # ceo | head | specialist
+  description: Desk lead…        # emitted verbatim as the runtime description
 runtime:
-  model: sonnet                 # logical tier: haiku | sonnet | opus | fable
-  surface: bot                  # bot (own Discord identity) | subagent (Task tool)
-  tokenEnv: DISCORD_TOKEN_SOFTWARE   # bots only
+  model: sonnet                  # logical tier: haiku | sonnet | opus | fable
+  surface: bot                   # bot (own Discord identity) | subagent (Task tool)
+  tokenEnv: DISCORD_TOKEN_TRADING # bots only
 capabilities:
   tools: [Read, Write, Edit, Bash, Glob, Grep, Task]
 interaction:
-  canMention: [head-of-product, ceo]   # @mention hand-off contract (bots)
+  canMention: [risk-manager, ceo]   # @mention hand-off contract (bots)
   handoffVia: github-issue
 guardrails:
   draftsOnly: true
   inherits: [company-hard-rules]
 prompt:
-  body: prompts/head-of-software.md
+  body: prompts/head-of-trading.md
 ```
 
 `runtime.model` is a **logical tier**; `backends/claude-code.mjs` maps it to a concrete

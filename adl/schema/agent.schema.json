@@ -20,8 +20,8 @@
           "description": "Unique kebab-case identifier. Must match the spec filename."
         },
         "department": {
-          "enum": ["company", "product", "software", "marketing", "sales"],
-          "description": "Owning department. 'company' = cross-cutting (ceo, scaffolder)."
+          "enum": ["company", "front-office", "middle-office", "back-office", "cross-cutting"],
+          "description": "Owning department (office). 'company' = meta-level orchestration (ceo, scaffolder) — distinct from the 'cross-cutting' business office (security, legal)."
         },
         "tier": {
           "enum": ["ceo", "head", "specialist"],

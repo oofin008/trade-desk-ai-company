@@ -32,7 +32,7 @@ export function extractSummary(text) {
   return { text: cleaned, summary };
 }
 
-// Guard against unbounded job-followup chains (dev -> qa -> ... -> forever).
+// Guard against unbounded job-followup chains (trader -> quant-researcher -> ... -> forever).
 // depth is the depth of the job about to be dispatched (0 = the original,
 // top-level job); maxDepth defaults to MAX_JOB_CHAIN_DEPTH's value in
 // agent-runner.js. Kept in sync manually since this file has no other deps.

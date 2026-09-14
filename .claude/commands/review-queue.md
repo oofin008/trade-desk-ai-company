@@ -1,19 +1,21 @@
 ---
-description: Show everything in the human-approval queue across departments. Drafts ready to ship, PRs ready to merge, decisions ready to confirm.
+description: Show everything in the human-approval queue across offices. Trades/orders ready to authorize, agreements ready to sign, fund movements ready to execute, decisions ready to confirm.
 ---
 
-Scan all departments for items needing human approval. Be specific.
+Scan all offices for items needing human approval. Be specific.
 
-For each department, list:
+For each office, list:
 - File path / issue / PR
 - One-line summary of what it is
-- What action the human takes (approve & send / merge / reject / etc.)
+- What action the human takes (authorize & execute / sign / merge / reject / etc.)
 
 Check:
-- `departments/marketing/drafts/` — draft assets awaiting publish
-- `departments/sales/drafts/` — outreach drafts awaiting send
-- GitHub PRs in draft state from `dev` subagent
-- Specs in `departments/product/` not yet assigned
+- `departments/front-office/strategy/` — approved-but-not-yet-live strategy mandates
+- `departments/back-office/treasury/` — allocation recommendations awaiting execution
+- `departments/cross-cutting/legal/` — draft agreements awaiting signature
+- `departments/cross-cutting/security/` — custody/withdrawal-control changes awaiting sign-off
+- GitHub PRs in draft state from `execution-engineer` subagent
+- Risk approvals in `departments/middle-office/risk-reports/` pending founder confirmation
 
 End with: **Total items pending: N**
 

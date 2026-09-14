@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crypto Trading Desk — Role Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0d0f12;
+    --panel:#14181d;
+    --panel-2:#1a1f26;
+    --line:#2a323c;
+    --text:#e7ebef;
+    --dim:#8a95a2;
+    --faint:#586472;
+    --oxblood:#c2453b;
+    --amber:#e0a43b;
+    --teal:#3fb6a8;
+    --violet:#8b7ee0;
+    --grid:#1e242c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--ink);
+    color:var(--text);
+    font-family:'Space Grotesk',sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'JetBrains Mono',monospace}
+
+  /* ---------- header ---------- */
+  header{
+    border-bottom:1px solid var(--line);
+    padding:48px 32px 36px;
+    max-width:1180px;
+    margin:0 auto;
+    background:
+      linear-gradient(180deg,rgba(194,69,59,.06),transparent 60%);
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    letter-spacing:.28em;
+    text-transform:uppercase;
+    color:var(--oxblood);
+    display:flex;
+    gap:14px;
+    align-items:center;
+  }
+  .eyebrow::before{content:"";width:34px;height:1px;background:var(--oxblood)}
+  h1{
+    font-size:clamp(2.4rem,6vw,4.2rem);
+    font-weight:700;
+    letter-spacing:-.02em;
+    line-height:1.02;
+    margin:18px 0 20px;
+  }
+  h1 .thin{color:var(--dim);font-weight:400}
+  .lede{
+    max-width:640px;
+    color:var(--dim);
+    font-size:1.05rem;
+  }
+  .statbar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:0;
+    margin-top:32px;
+    border:1px solid var(--line);
+    border-radius:2px;
+    overflow:hidden;
+  }
+  .statbar div{
+    flex:1 1 140px;
+    padding:14px 18px;
+    border-right:1px solid var(--line);
+    background:var(--panel);
+  }
+  .statbar div:last-child{border-right:none}
+  .statbar .k{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint)}
+  .statbar .v{font-size:1.4rem;font-weight:600;margin-top:4px}
+
+  /* ---------- office sections ---------- */
+  main{max-width:1180px;margin:0 auto;padding:0 32px 80px}
+  .office{padding-top:56px}
+  .office-head{
+    display:flex;
+    align-items:baseline;
+    gap:18px;
+    border-bottom:1px solid var(--line);
+    padding-bottom:12px;
+    margin-bottom:6px;
+  }
+  .office-tag{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.1em;
+    padding:4px 9px;
+    border-radius:2px;
+    color:var(--ink);
+  }
+  .tag-fo{background:var(--oxblood)}
+  .tag-mo{background:var(--amber)}
+  .tag-bo{background:var(--teal)}
+  .tag-xc{background:var(--violet)}
+  .office-head h2{font-size:1.5rem;font-weight:600;letter-spacing:-.01em}
+  .office-head .desc{margin-left:auto;color:var(--faint);font-size:.9rem;font-family:'JetBrains Mono',monospace;text-align:right}
+
+  /* ---------- role cards ---------- */
+  .roles{display:grid;grid-template-columns:1fr;gap:0}
+  .role{
+    border:1px solid var(--line);
+    border-top:none;
+    background:var(--panel);
+    padding:0;
+    transition:background .18s ease;
+  }
+  .office .roles .role:first-child{border-top:1px solid var(--line);margin-top:22px}
+  .role:hover{background:var(--panel-2)}
+  .role-top{
+    display:grid;
+    grid-template-columns:120px 1fr;
+    gap:0;
+  }
+  .role-code{
+    border-right:1px solid var(--line);
+    padding:22px 18px;
+    display:flex;
+    flex-direction:column;
+    justify-content:flex-start;
+    gap:6px;
+    background:linear-gradient(180deg,rgba(255,255,255,.015),transparent);
+  }
+  .role-code .id{
+    font-family:'JetBrains Mono',monospace;
+    font-size:1.05rem;
+    font-weight:700;
+    color:var(--text);
+  }
+  .role-code .crit{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    padding:3px 6px;
+    border-radius:2px;
+    width:fit-content;
+  }
+  .crit-core{background:rgba(194,69,59,.16);color:var(--oxblood);border:1px solid rgba(194,69,59,.4)}
+  .crit-early{background:rgba(224,164,59,.14);color:var(--amber);border:1px solid rgba(224,164,59,.35)}
+  .crit-scale{background:rgba(63,182,168,.12);color:var(--teal);border:1px solid rgba(63,182,168,.32)}
+  .role-body{padding:22px 26px}
+  .role-body h3{font-size:1.25rem;font-weight:600;letter-spacing:-.01em;margin-bottom:3px}
+  .role-body .oneline{color:var(--dim);font-size:.95rem;margin-bottom:16px}
+  .role-body h4{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--faint);
+    margin:16px 0 8px;
+  }
+  .role-body ul{list-style:none;display:grid;gap:6px}
+  .role-body li{
+    padding-left:18px;
+    position:relative;
+    font-size:.94rem;
+    color:var(--text);
+  }
+  .role-body li::before{
+    content:"▸";
+    position:absolute;left:0;top:0;
+    color:var(--oxblood);
+    font-size:.8rem;
+  }
+  .fo li::before{color:var(--oxblood)}
+  .mo li::before{color:var(--amber)}
+  .bo li::before{color:var(--teal)}
+  .xc li::before{color:var(--violet)}
+  .spec{
+    display:flex;
+    flex-wrap:wrap;
+    gap:0;
+    border-top:1px solid var(--line);
+    margin-top:20px;
+  }
+  .spec div{
+    flex:1 1 160px;
+    padding:12px 16px;
+    border-right:1px solid var(--line);
+    font-family:'JetBrains Mono',monospace;
+  }
+  .spec div:last-child{border-right:none}
+  .spec .sk{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  .spec .sv{font-size:.85rem;color:var(--text);margin-top:3px}
+
+  /* ---------- lean note ---------- */
+  .lean{
+    margin-top:64px;
+    border:1px solid var(--oxblood);
+    border-radius:2px;
+    background:linear-gradient(135deg,rgba(194,69,59,.08),rgba(194,69,59,.02));
+    padding:32px;
+  }
+  .lean .eyebrow{color:var(--oxblood)}
+  .lean h2{font-size:1.6rem;font-weight:600;margin:14px 0 10px;letter-spacing:-.01em}
+  .lean p{color:var(--dim);max-width:680px;margin-bottom:20px}
+  .lean-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+  .lean-grid div{background:var(--panel);padding:16px 18px}
+  .lean-grid .n{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--oxblood);letter-spacing:.1em}
+  .lean-grid .r{font-weight:600;margin-top:5px;font-size:.98rem}
+  .lean-grid .w{color:var(--faint);font-size:.82rem;margin-top:3px;font-family:'JetBrains Mono',monospace}
+
+  footer{
+    max-width:1180px;margin:0 auto;padding:28px 32px 60px;
+    border-top:1px solid var(--line);
+    color:var(--faint);
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    letter-spacing:.05em;
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+  }
+
+  @media(max-width:640px){
+    header{padding:32px 18px 26px}
+    main{padding:0 18px 60px}
+    .role-top{grid-template-columns:1fr}
+    .role-code{border-right:none;border-bottom:1px solid var(--line);flex-direction:row;align-items:center;gap:12px}
+    .office-head{flex-wrap:wrap}
+    .office-head .desc{margin-left:0;width:100%;text-align:left}
+  }
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Crypto Trading Desk / Org Book v1.0</div>
+  <h1>Positions to staff a<br><span class="thin">crypto trading desk.</span></h1>
+  <p class="lede">Every seat on the floor, grouped by office. Each card carries the mandate, core responsibilities, and a hiring spec — who it reports to, when it comes online, and how badly the desk breaks without it.</p>
+  <div class="statbar mono">
+    <div><div class="k">Front Office</div><div class="v">4 roles</div></div>
+    <div><div class="k">Middle Office</div><div class="v">2 roles</div></div>
+    <div><div class="k">Back Office</div><div class="v">3 roles</div></div>
+    <div><div class="k">Cross-cutting</div><div class="v">2 roles</div></div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============ FRONT OFFICE ============ -->
+  <section class="office fo">
+    <div class="office-head">
+      <span class="office-tag tag-fo">FO</span>
+      <h2>Front Office</h2>
+      <span class="desc">Owns risk, execution &amp; P&amp;L</span>
+    </div>
+    <div class="roles">
+
+      <article class="role">
+        <div class="role-top">
+          <div class="role-code"><span class="id">FO-01</span><span class="crit crit-core">Core</span></div>
+          <div class="role-body">
+            <h3>Head of Trading / Desk Lead</h3>
+            <p class="oneline">Owns the trading strategy, the risk mandate, and the desk's bottom line.</p>
+            <h4>Responsibilities</h4>
+            <ul>
+              <li>Set the desk's mandate: which markets, strategies, and instruments are in scope and which are off-limits.</li>
+              <li>Own aggregate P&amp;L and defend it to investors, partners, or the board.</li>
+              <li>Allocate risk budget and capital across traders and strategies.</li>
+              <li>Approve new strategies, venues, and counterparties before they go live.</li>
+              <li>Set escalation rules — when a trader must cut, hedge, or call for sign-off.</li>
+            </ul>
+            <h4>Must have</h4>
+            <ul>
+              <li>Live P&amp;L track record on a crypto or derivatives desk.</li>
+              <li>Fluency in perps, funding, basis, and liquidation mechanics.</li>
+              <li>Judgment under drawdown — the temperament to size down, not double up.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="spec mono">
+          <div><div class="sk">Reports to</div><div class="sv">Founder / CIO</div></div>
+          <div><div class="sk">Hire when</div><div class="sv">Day 1</div></div>
+          <div><div class="sk">Breaks desk if missing</div><div class="sv">Total — no mandate owner</div></div>
+        </div>
+      </article>
+
+      <article class="role">
+        <div class="role-top">
+          <div class="role-code"><span class="id">FO-02</span><span class="crit crit-core">Core</span></div>
+          <div class="role-body">
+            <h3>Trader</h3>
+            <p class="oneline">Executes the strategy — discretionary, systematic, or market-making.</p>
+            <h4>Responsibilities</h4>
+            <ul>
+              <li>Work orders across spot, perps, and options with an eye on slippage and market impact.</li>
+              <li>Run the assigned book: directional, arbitrage, market-making, or basis, within set limits.</li>
+              <li>Monitor funding, open interest, and liquidity in real time; adjust exposure accordingly.</li>
+              <li>Manage inventory and hedges; flatten or reduce ahead of known events.</li>
+              <li>Log every fill and rationale for post-trade review and attribution.</li>
+            </ul>
+            <h4>Must have</h4>
+            <ul>
+              <li>Screen time on crypto venues and comfort with high volatility.</li>
+              <li>Discipline to trade the plan and respect stops and limits.</li>
+              <li>Numeracy for on-the-fly sizing, funding math, and risk-reward.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="spec mono">
+          <div><div class="sk">Reports to</div><div class="sv">Head of Trading</div></div>
+          <div><div class="sk">Hire when</div><div class="sv">Day 1 (may be the lead early)</div></div>
+          <div><div class="sk">Breaks desk if missing</div><div class="sv">No execution</div></div>
+        </div>
+      </article>
+
+      <article class="role">
+        <div class="role-top">
+          <div class="role-code"><span class="id">FO-03</span><span class="crit crit-early">Early</span></div>
+          <div class="role-body">
+            <h3>Quant Researcher / Quant Developer</h3>
+            <p class="oneline">Turns market data into signals, models, and tested strategies.</p>
+            <h4>Responsibilities</h4>
+            <ul>
+              <li>Research alpha: build, backtest, and validate signals across regimes.</li>
+              <li>Stand up the data pipeline — historical and live market, funding, and on-chain feeds.</li>
+              <li>Build the backtesting and simulation stack with realistic fees, slippage, and latency.</li>
+              <li>Translate research into production strategy code and monitor live-vs-backtest drift.</li>
+              <li>Size positions and set risk parameters from statistical evidence, not gut.</li>
+            </ul>
+            <h4>Must have</h4>
+            <ul>
+              <li>Strong Python (or equivalent) plus statistics and time-series skill.</li>
+              <li>Backtesting rigor — awareness of overfitting, look-ahead, and survivorship bias.</li>
+              <li>Ability to ship research into running, monitored code.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="spec mono">
+          <div><div class="sk">Reports to</div><div class="sv">Head of Trading</div></div>
+          <div><div class="sk">Hire when</div><div class="sv">Once strategy needs to scale</div></div>
+          <div><div class="sk">Breaks desk if missing</div><div class="sv">No edge beyond discretion</div></div>
+        </div>
+      </article>
+
+      <article class="role">
+        <div class="role-top">
+          <div class="role-code"><span class="id">FO-04</span><span class="crit crit-early">Early</span></div>
+          <div class="role-body">
+            <h3>Execution / Trading Infrastructure Engineer</h3>
+            <p class="oneline">Keeps the pipes fast, connected, and always up.</p>
+            <h4>Responsibilities</h4>
+            <ul>
+              <li>Build and maintain exchange connectivity — REST and WebSocket, order routing, market data.</li>
+              <li>Own uptime, latency, and failover for the trading stack.</li>
+              <li>Build execution algos and the order-management layer traders rely on.</li>
+              <li>Instrument monitoring, alerting, and kill-switches for runaway or stuck orders.</li>
+              <li>Manage deployment, secrets, and environment separation between test and live.</li>
+            </ul>
+            <h4>Must have</h4>
+            <ul>
+              <li>Production experience with low-latency, event-driven systems.</li>
+              <li>Fluency with exchange APIs, rate limits, and reconnection edge cases.</li>
+              <li>DevOps discipline — observability, on-call, and incident response.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="spec mono">
+          <div><div class="sk">Reports to</div><div class="sv">Head of Trading / CTO</div></div>
+          <div><div class="sk">Hire when</div><div class="sv">Before automating flow</div></div>
+          <div><div class="sk">Breaks desk if missing</div><div class="sv">Downtime = missed / stuck orders</div></div>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ============ MIDDLE OFFICE ============ -->
+  <section class="office mo">
+    <div class="office-head">
+      <span class="office-tag tag-mo">MO</span>
+      <h2>Middle Office</h2>
+      <span class="desc">Independent check on risk &amp; conduct</span>
+    </div>
+    <div class="roles">
+
+      <article class="role">
+        <div class="role-top">
+          <div class="role-code"><span class="id">MO-01</span><span class="crit crit-core">Core</span></div>
+          <div class="role-body">
+            <h3>Risk Manager</h3>
+            <p class="oneline">Independent guardrail on exposure, leverage, and liquidation risk.</p>
+            <h4>Responsibilities</h4>
+            <ul>
+              <li>Set and enforce position, leverage, and concentration limits per trader and book.</li>
+              <li>Monitor margin, liquidation distance, and exposure across venues in real time.</li>
+              <li>Run stress tests and scenario analysis — gap moves, venue outages, funding shocks.</li>
+              <li>Own the risk dashboard and escalate breaches independently of the desk.</li>
+              <li>Model counterparty and venue risk; cap exposure to any single exchange.</li>
+            </ul>
+            <h4>Must have</h4>
+            <ul>
+              <li>Quantitative risk background — VaR, stress testing, margin systems.</li>
+              <li>Deep grasp of derivatives leverage and forced-liquidation mechanics.</li>
+              <li>Independence — reports outside the trading P&amp;L line.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="spec mono">
+          <div><div class="sk">Reports to</div><div class="sv">Founder / board — NOT the desk</div></div>
+          <div><div class="sk">Hire when</div><div class="sv">Before real leverage is live</div></div>
+          <div><div class="sk">Breaks desk if missing</div><div class="sv">Blow-up risk — the classic killer</div></div>
+        </div>
+      </article>
+
+      <article class="role">
+        <div class="role-top">
+          <div class="role-code"><span class="id">MO-02</span><span class="crit crit-early">Early</span></div>
+          <div class="role-body">
+            <h3>Compliance Officer</h3>
+            <p class="oneline">Keeps the desk inside the law across every jurisdiction it touches.</p>
+            <h4>Responsibilities</h4>
+            <ul>
+              <li>Own KYC/AML onboarding for counterparties, venues, and (if applicable) clients.</li>
+              <li>Track licensing and registration requirements per market and file what's required.</li>
+              <li>Screen against sanctions and monitor transactions for suspicious activity.</li>
+              <li>Write and enforce internal policies — personal trading, conflicts, market conduct.</li>
+              <li>Manage regulator relationships, audits, and reporting obligations.</li>
+            </ul>
+            <h4>Must have</h4>
+            <ul>
+              <li>Crypto/fintech regulatory knowledge in the desk's jurisdictions.</li>
+              <li>AML/KYC program experience and sanctions-screening fluency.</li>
+              <li>Willingness to say no and halt activity when rules require it.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="spec mono">
+          <div><div class="sk">Reports to</div><div class="sv">Founder / board</div></div>
+          <div><div class="sk">Hire when</div><div class="sv">Before trading regulated markets — often fractional first</div></div>
+          <div><div class="sk">Breaks desk if missing</div><div class="sv">Legal / licensing exposure</div></div>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ============ BACK OFFICE ============ -->
+  <section class="office bo">
+    <div class="office-head">
+      <span class="office-tag tag-bo">BO</span>
+      <h2>Back Office</h2>
+      <span class="desc">Settlement, treasury &amp; the books</span>
+    </div>
+    <div class="roles">
+
+      <article class="role">
+        <div class="role-top">
+          <div class="role-code"><span class="id">BO-01</span><span class="crit crit-early">Early</span></div>
+          <div class="role-body">
+            <h3>Operations / Settlement</h3>
+            <p class="oneline">Reconciles every trade, transfer, and balance so the numbers are true.</p>
+            <h4>Responsibilities</h4>
+            <ul>
+              <li>Reconcile trades, fills, and balances across all venues daily.</li>
+              <li>Manage deposits, withdrawals, and wallet/custody operations under strict controls.</li>
+              <li>Run fiat on/off ramps and banking relationships.</li>
+              <li>Investigate and resolve breaks between internal records and exchange statements.</li>
+              <li>Maintain segregation of duties — ops moves funds, trading never does.</li>
+            </ul>
+            <h4>Must have</h4>
+            <ul>
+              <li>Reconciliation discipline and comfort with crypto transfer mechanics.</li>
+              <li>Process rigor — checklists, dual approval, audit trails.</li>
+              <li>Zero tolerance for unexplained breaks.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="spec mono">
+          <div><div class="sk">Reports to</div><div class="sv">COO / Head of Ops</div></div>
+          <div><div class="sk">Hire when</div><div class="sv">As soon as capital moves regularly</div></div>
+          <div><div class="sk">Breaks desk if missing</div><div class="sv">Untracked funds / broken books</div></div>
+        </div>
+      </article>
+
+      <article class="role">
+        <div class="role-top">
+          <div class="role-code"><span class="id">BO-02</span><span class="crit crit-scale">Scale</span></div>
+          <div class="role-body">
+            <h3>Treasury</h3>
+            <p class="oneline">Manages where capital sits and makes idle balances work.</p>
+            <h4>Responsibilities</h4>
+            <ul>
+              <li>Allocate capital across venues to meet margin needs without over-funding any one.</li>
+              <li>Manage funding, rehypothecation, and yield on idle balances within risk limits.</li>
+              <li>Forecast liquidity and cash-flow needs across the desk.</li>
+              <li>Optimize stablecoin and fiat holdings; manage FX where relevant.</li>
+              <li>Coordinate with risk on venue-exposure caps and collateral placement.</li>
+            </ul>
+            <h4>Must have</h4>
+            <ul>
+              <li>Treasury or liquidity-management background.</li>
+              <li>Understanding of exchange collateral, margin, and settlement cycles.</li>
+              <li>Caution around counterparty risk on parked balances.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="spec mono">
+          <div><div class="sk">Reports to</div><div class="sv">CFO / COO</div></div>
+          <div><div class="sk">Hire when</div><div class="sv">When capital spans many venues</div></div>
+          <div><div class="sk">Breaks desk if missing</div><div class="sv">Trapped capital, funding drag</div></div>
+        </div>
+      </article>
+
+      <article class="role">
+        <div class="role-top">
+          <div class="role-code"><span class="id">BO-03</span><span class="crit crit-scale">Scale</span></div>
+          <div class="role-body">
+            <h3>Accounting / Finance</h3>
+            <p class="oneline">Owns the books, tax, and audit-ready records.</p>
+            <h4>Responsibilities</h4>
+            <ul>
+              <li>Maintain the general ledger and produce P&amp;L and balance-sheet statements.</li>
+              <li>Handle crypto tax treatment, cost-basis tracking, and filings.</li>
+              <li>Prepare for and support external audits.</li>
+              <li>Track fees, funding, and financing costs against strategy performance.</li>
+              <li>Build management reporting for partners and investors.</li>
+            </ul>
+            <h4>Must have</h4>
+            <ul>
+              <li>Accounting qualification and crypto-accounting familiarity.</li>
+              <li>Grasp of digital-asset cost-basis and tax complexity.</li>
+              <li>Precision and documentation habits.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="spec mono">
+          <div><div class="sk">Reports to</div><div class="sv">CFO</div></div>
+          <div><div class="sk">Hire when</div><div class="sv">Often outsourced first, in-house at scale</div></div>
+          <div><div class="sk">Breaks desk if missing</div><div class="sv">Tax / audit exposure</div></div>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ============ CROSS-CUTTING ============ -->
+  <section class="office xc">
+    <div class="office-head">
+      <span class="office-tag tag-xc">XC</span>
+      <h2>Cross-cutting</h2>
+      <span class="desc">Existential to crypto specifically</span>
+    </div>
+    <div class="roles">
+
+      <article class="role">
+        <div class="role-top">
+          <div class="role-code"><span class="id">SEC</span><span class="crit crit-core">Core</span></div>
+          <div class="role-body">
+            <h3>Security Engineer</h3>
+            <p class="oneline">Guards the keys — the one failure that ends the firm.</p>
+            <h4>Responsibilities</h4>
+            <ul>
+              <li>Design custody architecture: cold/hot wallet split, multisig, HSMs, key ceremonies.</li>
+              <li>Own key management, rotation, and recovery procedures.</li>
+              <li>Enforce withdrawal controls — allowlists, thresholds, multi-party approval.</li>
+              <li>Run access control, secrets management, and infrastructure hardening.</li>
+              <li>Lead incident response for compromise, phishing, and insider-threat scenarios.</li>
+            </ul>
+            <h4>Must have</h4>
+            <ul>
+              <li>Applied crypto-security and custody experience.</li>
+              <li>Adversarial mindset — assumes attackers, insiders, and mistakes.</li>
+              <li>Discipline to make security non-optional even under time pressure.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="spec mono">
+          <div><div class="sk">Reports to</div><div class="sv">CTO / Founder</div></div>
+          <div><div class="sk">Hire when</div><div class="sv">Day 1 — never skimp, even lean</div></div>
+          <div><div class="sk">Breaks desk if missing</div><div class="sv">One breach = game over</div></div>
+        </div>
+      </article>
+
+      <article class="role">
+        <div class="role-top">
+          <div class="role-code"><span class="id">LEG</span><span class="crit crit-scale">Scale</span></div>
+          <div class="role-body">
+            <h3>Legal Counsel</h3>
+            <p class="oneline">Structures the entity and every agreement the desk signs.</p>
+            <h4>Responsibilities</h4>
+            <ul>
+              <li>Advise on entity structure, jurisdiction, and licensing strategy.</li>
+              <li>Draft and negotiate counterparty, prime-broker, and venue agreements.</li>
+              <li>Advise on regulatory classification of instruments and activities.</li>
+              <li>Handle IP, employment, and investor documentation.</li>
+              <li>Manage disputes and liaise with external specialist counsel.</li>
+            </ul>
+            <h4>Must have</h4>
+            <ul>
+              <li>Financial-services / digital-asset legal background.</li>
+              <li>Cross-border structuring experience.</li>
+              <li>Commercial judgment, not just risk-flagging.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="spec mono">
+          <div><div class="sk">Reports to</div><div class="sv">Founder / board</div></div>
+          <div><div class="sk">Hire when</div><div class="sv">External counsel early, in-house at scale</div></div>
+          <div><div class="sk">Breaks desk if missing</div><div class="sv">Structural / contractual exposure</div></div>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ============ LEAN NOTE ============ -->
+  <div class="lean">
+    <div class="eyebrow">Minimum viable desk</div>
+    <h2>The lean version — 3 to 5 people</h2>
+    <p>You do not staff all eleven seats on day one. Most functions collapse into a handful of people wearing several hats — but two things you cannot compress: <strong>security/custody</strong> and <strong>independent risk</strong>. Those are where crypto desks blow up.</p>
+    <div class="lean-grid mono">
+      <div><div class="n">SEAT 01</div><div class="r">Head of Trading</div><div class="w">+ treasury + P&amp;L</div></div>
+      <div><div class="n">SEAT 02</div><div class="r">Quant Developer</div><div class="w">+ research + strategy</div></div>
+      <div><div class="n">SEAT 03</div><div class="r">Infra / DevOps Eng</div><div class="w">+ execution + ops</div></div>
+      <div><div class="n">SEAT 04</div><div class="r">Risk + Compliance</div><div class="w">fractional / part-time OK</div></div>
+      <div><div class="n">SEAT 05</div><div class="r">Security / Custody</div><div class="w">never optional</div></div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <span>CRYPTO DESK ROLE BOOK · 11 POSITIONS · 4 OFFICES</span>
+  <span>Structure only — not legal, tax, or compliance advice.</span>
+</footer>
+
+</body>
+</html>

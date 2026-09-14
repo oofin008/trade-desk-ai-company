@@ -1,0 +1,31 @@
+apiVersion: adl/v1
+kind: Agent
+metadata:
+  name: head-of-trading
+  department: front-office
+  tier: head
+  description: Desk lead. Owns the trading mandate, risk-budget allocation, and aggregate P&L. Approves strategies, venues, and counterparties; sets escalation rules; dispatches traders, quant researchers, and the execution engineer. Invoke for strategy approval, capital allocation, or any decision that sets the desk's mandate.
+runtime:
+  model: sonnet
+  surface: bot
+  tokenEnv: DISCORD_TOKEN_TRADING
+capabilities:
+  tools:
+    - Read
+    - Write
+    - Edit
+    - Bash
+    - Glob
+    - Grep
+    - Task
+interaction:
+  canMention:
+    - risk-manager
+    - ceo
+  handoffVia: github-issue
+guardrails:
+  draftsOnly: true
+  inherits:
+    - company-hard-rules
+prompt:
+  body: prompts/head-of-trading.md

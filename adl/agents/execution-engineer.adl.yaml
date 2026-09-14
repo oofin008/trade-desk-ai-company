@@ -1,0 +1,24 @@
+apiVersion: adl/v1
+kind: Agent
+metadata:
+  name: execution-engineer
+  department: front-office
+  tier: specialist
+  description: Trading infrastructure engineer. Builds and maintains exchange connectivity, order routing, execution algos, and the order-management layer; owns uptime, latency, monitoring, and kill-switches. Invoke for connectivity, infra, or execution-tooling tasks delegated by head-of-trading.
+runtime:
+  model: sonnet
+  surface: subagent
+capabilities:
+  tools:
+    - Read
+    - Write
+    - Edit
+    - Bash
+    - Glob
+    - Grep
+guardrails:
+  draftsOnly: true
+  inherits:
+    - company-hard-rules
+prompt:
+  body: prompts/execution-engineer.md

@@ -4,7 +4,7 @@
 // that agent's own bot, listens for messages that address it, and answers by
 // running `claude --print --agent <name>` against the company repo. Because
 // every agent is a real bot in the same channel, an agent simply mentioning a
-// peer (@head-of-software) becomes a real ping that the peer's process receives
+// peer (@head-of-trading) becomes a real ping that the peer's process receives
 // — Discord itself is the message bus. No central router.
 //
 // Cost discipline (the founder's hard requirement) lives here:
@@ -81,21 +81,17 @@ if (!token) {
   process.exit(1);
 }
 
-// MCP servers (github / discord / stitch). `claude --print` loads MCP only when
+// MCP servers (github / discord). `claude --print` loads MCP only when
 // passed `--mcp-config <file> --strict-mcp-config`. We resolve the `${VAR}`
 // placeholders in the repo-root `.mcp.json` from the runner's own env (already
 // loaded by loadEnvFile above) into a private per-agent tmp file, and pass it
-// only to MCP-enabled agents (Stitch is heavy; dev/qa have no use for it).
+// only to MCP-enabled agents.
 // Runtime-only: `pm2 restart all` to pick up changes, no hot reload.
 // Enabled agents: `roster.json` entries with a non-empty `mcp` array (compiled
-// from `capabilities.mcp` in the agent's ADL spec), plus `ux-designer`.
+// from `capabilities.mcp` in the agent's ADL spec). None currently declare one.
 const mcpEnabledAgents = new Set(
   roster.filter((r) => Array.isArray(r.mcp) && r.mcp.length > 0).map((r) => r.name)
 );
-// ux-designer is a dispatched specialist job, not a bot, so it's not in
-// roster.json — but its `capabilities.mcp: [stitch]` is declared in
-// adl/agents/ux-designer.adl.yaml. The runner special-cases it here.
-mcpEnabledAgents.add('ux-designer');
 const resolvedMcpConfigPath = buildResolvedMcpConfig(projectDir, AGENT_NAME, process.env);
 if (resolvedMcpConfigPath) {
   console.log(`[${AGENT_NAME}] MCP config resolved → ${resolvedMcpConfigPath} (this agent MCP-enabled: ${mcpEnabledAgents.has(AGENT_NAME)})`);
@@ -406,7 +402,7 @@ async function runTurn(message, ids) {
 
   const preamble = [
     `You are operating as a Discord bot named "${AGENT_NAME}" in the company's shared channel.`,
-    `To hand work to a peer, mention them by name with @ — e.g. @head-of-software. Available peers: ${peerNames.map((n) => '@' + n).join(', ')}.`,
+    `To hand work to a peer, mention them by name with @ — e.g. @head-of-trading. Available peers: ${peerNames.map((n) => '@' + n).join(', ')}.`,
     `Only mention a peer when you genuinely need them; each mention spawns their agent and costs tokens.`,
     `When the task is done or you are blocked, address the founder and give a terse summary.`,
     `Keep replies short (a few lines). Durable handoffs and records go through GitHub issues; @mentions are for live coordination.`,
@@ -545,7 +541,7 @@ async function runJob(thread, job, depth) {
 async function runJobFollowup(thread, jobAgent, jobPrompt, contextSummary, depth = 0) {
   const preamble = [
     `You are operating as a Discord bot named "${AGENT_NAME}" in the company's shared channel.`,
-    `To hand work to a peer, mention them by name with @ — e.g. @head-of-software. Available peers: ${peerNames.map((n) => '@' + n).join(', ')}.`,
+    `To hand work to a peer, mention them by name with @ — e.g. @head-of-trading. Available peers: ${peerNames.map((n) => '@' + n).join(', ')}.`,
     `Only mention a peer when you genuinely need them; each mention spawns their agent and costs tokens.`,
     `Keep replies short (a few lines). Durable handoffs and records go through GitHub issues; @mentions are for live coordination.`
   ].join(' ');

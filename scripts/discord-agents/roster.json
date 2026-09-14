@@ -6,29 +6,23 @@
     "default": true
   },
   {
-    "name": "head-of-marketing",
-    "tokenEnv": "DISCORD_TOKEN_MARKETING",
+    "name": "head-of-operations",
+    "tokenEnv": "DISCORD_TOKEN_OPERATIONS",
     "model": "sonnet"
   },
   {
-    "name": "head-of-product",
-    "tokenEnv": "DISCORD_TOKEN_PRODUCT",
-    "model": "sonnet",
-    "mcp": [
-      "stitch"
-    ]
-  },
-  {
-    "name": "head-of-sales",
-    "tokenEnv": "DISCORD_TOKEN_SALES",
+    "name": "head-of-trading",
+    "tokenEnv": "DISCORD_TOKEN_TRADING",
     "model": "sonnet"
   },
   {
-    "name": "head-of-software",
-    "tokenEnv": "DISCORD_TOKEN_SOFTWARE",
-    "model": "sonnet",
-    "mcp": [
-      "stitch"
-    ]
+    "name": "risk-manager",
+    "tokenEnv": "DISCORD_TOKEN_RISK",
+    "model": "sonnet"
+  },
+  {
+    "name": "security-engineer",
+    "tokenEnv": "DISCORD_TOKEN_SECURITY",
+    "model": "sonnet"
   }
 ]

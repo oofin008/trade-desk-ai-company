@@ -1,0 +1,26 @@
+apiVersion: adl/v1
+kind: Agent
+metadata:
+  name: quant-researcher
+  department: front-office
+  tier: specialist
+  description: Quant researcher/developer. Builds, backtests, and validates trading signals; maintains the market and on-chain data pipeline and the backtesting stack; ships research into monitored production strategy code. Invoke for signal research, strategy backtesting, or sizing/risk-parameter work.
+runtime:
+  model: sonnet
+  surface: subagent
+capabilities:
+  tools:
+    - Read
+    - Write
+    - Edit
+    - Bash
+    - Glob
+    - Grep
+    - WebSearch
+    - WebFetch
+guardrails:
+  draftsOnly: true
+  inherits:
+    - company-hard-rules
+prompt:
+  body: prompts/quant-researcher.md
